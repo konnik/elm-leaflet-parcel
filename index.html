@@ -3,23 +3,25 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="./node_modules/leaflet/dist/leaflet.css">
         <style>
+            body { padding: 10px}
+
             #container {
                 padding: 0;
                 margin: 0;
-                position: relative;
                 height: 100%;
                 width: 100%;
+                z-index: 0;
             }
             #map{
-                position: absolute;
-                top: 0;
-                bottom: 0;
+                height: 100%;
                 width: 100%;
+                position: relative;
+                z-index: 0;
                 }
         </style>
     </head>
     <body>
-        <main></main>
+        <div id="elm">lkasjdlkas</div>
         <div id="container">
             <div id="map"></div>
         </div>

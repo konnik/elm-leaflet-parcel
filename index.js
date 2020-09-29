@@ -2,7 +2,7 @@
 import { Elm } from './src/Main.elm'
 
 Elm.Main.init({
-  node: document.querySelector('main')
+  node: document.getElementById('elm')
 })
 
 import L from 'leaflet';
