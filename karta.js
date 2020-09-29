@@ -17,27 +17,36 @@ export default function() {
 
     var map = L.map("map").setView(gavle, 10);
 
-    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+    const orto = L.tileLayer.wms("https://stompunkt.lantmateriet.se/maps/ortofoto/wms/v1.3", {
+        layers: "Ortofoto_0.16,Ortofoto_0.25,Ortofoto_0.4,Ortofoto_0.5",
+        // layers: "orto025,orto050",
+        format: 'image/jpeg',
+        version: '1.1.1',
+        detectRetina: true
+    });
+
+
+    const streets = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
         maxZoom: 18,
         id: 'mapbox/streets-v11',
         tileSize: 512,
         zoomOffset: -1,
         accessToken: 'pk.eyJ1Ijoia29ubmlrIiwiYSI6ImNrZm13azN2ajFmMWozMHFoZ3F3czFneW0ifQ.6vvhWXlFXhso6ip9QPMyqA'
-    })//.addTo(map);
+    });
 
     const topowebbUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/token/{accessToken}/1.0.0/{layer}/default/3857/{z}/{y}/{x}.png"
-    L.tileLayer(topowebbUrl, {
+    const topowebb = L.tileLayer(topowebbUrl, {
         accessToken: "b8913fdb-6555-3591-9cbb-6f1456ee1490",
         layer: "topowebb_nedtonad",
     maxZoom: 15,
     minZoom: 0,
     continuousWorld: true,
     attribution: '&copy; <a href="https://www.lantmateriet.se/en/">Lantmäteriet</a> Topografisk Webbkarta Visning, CCB',
-    }).addTo(map);
+    });
 
 
-    L.geoJSON([testeboan, gavlean ], {
+    const forsar = L.geoJSON([testeboan, gavlean ], {
         style: {
             color: "#0000ff",
             weight: 5
@@ -53,13 +62,23 @@ export default function() {
                 layer.bindTooltip(feature.properties.namn + " (" + feature.properties.vattendrag + ")", {
                     sticky : true
                 });
-                // layer.on('mouseover', function (e) {
-                //     this.openPopup();
-                // });
-                // layer.on('mouseout', function (e) {
-                //     this.closePopup();
-                // });
             }
         }
-    }).addTo(map);
+    });
+
+    var baseMaps = {
+        "Topowebb ": topowebb,
+        "Ortofoto": orto,
+        "Streets": streets
+    };
+    
+    var overlayMaps = {
+        "Forsar": forsar
+    };
+    
+    topowebb.addTo(map);
+    forsar.addTo(map);
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+
 }
