@@ -1,15 +1,68 @@
-export let testeboan =
-{
+export default {
     "type": "FeatureCollection",
     "features": [
         {
             "type": "Feature",
             "properties": {
-                "stroke": "#f500c0",
-                "stroke-width": 20,
-                "stroke-opacity": 1,
-                "description": "null",
-                "name": "Fors"
+                "typ":"putin",
+                "namn": "Putin"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    17.03764110803604,
+                    60.756662144476
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "typ" : "takeout",
+                "namn": "Takeout"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    17.12709470253113,
+                    60.72982
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "typ" : "parkering",
+                "namn": "Parkering (putin)"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    17.038201689720154,
+                    60.75698972084795
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "typ" : "parkering",
+                "namn": "Parkering (takeout)"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    17.12603467700468,
+                    60.7293653099745
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "typ": "fors",
+                "namn": "Brännsågen-Åbyggeby",
+                "vattendrag":"Testeboån"
             },
             "geometry": {
                 "type": "LineString",
@@ -506,69 +559,6 @@ export let testeboan =
                         17.12718917822324,
                         60.729932607678734
                     ]
-                ]
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {
-                "marker-color": "#00ff00",
-                "marker-size": "medium",
-                "marker-symbol": "",
-                "name": "Putin",
-                "description": "null"
-            },
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    17.03764110803604,
-                    60.756662144476
-                ]
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {
-                "description": null,
-                "marker-size": "",
-                "name": "Takeout"
-            },
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    17.12709470253113,
-                    60.72982
-                ]
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {
-                "description": null,
-                "marker-size": "",
-                "name": "Parkering Putin"
-            },
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    17.038201689720154,
-                    60.75698972084795
-                ]
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {
-                "marker-color": "#ff0000",
-                "marker-size": "small",
-                "description": "null",
-                "name": "Parkering Takeout"
-            },
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    17.12603467700468,
-                    60.7293653099745
                 ]
             }
         }
