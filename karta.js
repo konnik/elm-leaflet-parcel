@@ -1,7 +1,11 @@
 import L from 'leaflet';
+
 import testeboan from "./forsar/brannsagen";
 import gavlean from "./forsar/gavlean";
 import forsby from "./forsar/forsby";
+import vavaren from "./forsar/vavaren";
+
+const forsarGeo =  [testeboan, gavlean, forsby, vavaren ]
 
 export default function() {
     delete L.Icon.Default.prototype._getIconUrl;
@@ -47,14 +51,12 @@ export default function() {
     attribution: '&copy; <a href="https://www.lantmateriet.se/en/">Lantmäteriet</a> Topografisk Webbkarta Visning, CCB',
     });
 
-
-    const forsar = L.geoJSON([testeboan, gavlean, forsby ], {
+    const forsar = L.geoJSON(forsarGeo, {
         style: {
             color: "#0000ff",
             weight: 5
         },
         filter: (feature, layer) => {
-            console.log("filter", feature.properties, layer)
             return feature.properties.typ == "fors";
         },
         onEachFeature:  (feature, layer) => {
@@ -68,12 +70,13 @@ export default function() {
         }
     });
 
-    const pois = L.geoJSON([testeboan, gavlean, forsby ], {
+    const pois = L.geoJSON(forsarGeo, {
         style: {
             color: "#0000ff",
             weight: 5
         },
         filter: (feature, layer) => {
+            console.log(feature.properties)
             return feature.properties.typ != "fors";
         },
         onEachFeature:  (feature, layer) => {
