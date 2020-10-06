@@ -1,6 +1,7 @@
 import L from 'leaflet';
-import testeboan from "./forsar/testeboan";
+import testeboan from "./forsar/brannsagen";
 import gavlean from "./forsar/gavlean";
+import forsby from "./forsar/forsby";
 
 export default function() {
     delete L.Icon.Default.prototype._getIconUrl;
@@ -22,6 +23,7 @@ export default function() {
         // layers: "orto025,orto050",
         format: 'image/jpeg',
         version: '1.1.1',
+
         detectRetina: true
     });
 
@@ -46,7 +48,7 @@ export default function() {
     });
 
 
-    const forsar = L.geoJSON([testeboan, gavlean ], {
+    const forsar = L.geoJSON([testeboan, gavlean, forsby ], {
         style: {
             color: "#0000ff",
             weight: 5
