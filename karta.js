@@ -17,10 +17,10 @@ export default function() {
     });
 
 
-    const gavle = [60.719459, 17.054273];
+    const gavle = [60.719459, 17.094273];
     const sverige = [63.031926, 15.451756]
 
-    var map = L.map("map").setView(gavle, 12);
+    var map = L.map("map").setView(gavle, 11);
 
     const orto = L.tileLayer.wms("https://stompunkt.lantmateriet.se/maps/ortofoto/wms/v1.3", {
         layers: "Ortofoto_0.16,Ortofoto_0.25,Ortofoto_0.4,Ortofoto_0.5",
