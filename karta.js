@@ -68,6 +68,22 @@ export default function() {
         }
     });
 
+    const pois = L.geoJSON([testeboan, gavlean, forsby ], {
+        style: {
+            color: "#0000ff",
+            weight: 5
+        },
+        filter: (feature, layer) => {
+            return feature.properties.typ != "fors";
+        },
+        onEachFeature:  (feature, layer) => {
+            console.log("onEachFeature", feature.properties)
+            layer.bindTooltip(feature.properties.namn, {
+                sticky : true
+            });
+        }
+    });
+
     var baseMaps = {
         "Topowebb ": topowebb,
         "Ortofoto": orto,
@@ -75,11 +91,13 @@ export default function() {
     };
     
     var overlayMaps = {
-        "Forsar": forsar
+        "Forsar": forsar,
+        "POIs": pois
     };
     
     topowebb.addTo(map);
     forsar.addTo(map);
+    pois.addTo(map);
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 
