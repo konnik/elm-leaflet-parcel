@@ -25487,7 +25487,7 @@ var _default = {
     },
     "geometry": {
       "type": "LineString",
-      "coordinates": [[17.14040994644165, 60.71844904614029], [17.140865921974182, 60.718149937753594], [17.14120924472809, 60.718026620327336], [17.14142918586731, 60.71788493589159], [17.141520380973816, 60.71768552710872], [17.14163303375244, 60.71744938352844], [17.141520380973816, 60.717265715099416], [17.141504287719727, 60.71694560475644], [17.141590118408203, 60.71659925226872]]
+      "coordinates": [[17.14040994644165, 60.71844904614029], [17.140828371047974, 60.7181289475868], [17.141085863113403, 60.717966273329246], [17.141225337982178, 60.71785082658228], [17.141364812850952, 60.71764616996588], [17.141547203063965, 60.7174310167328], [17.141520380973816, 60.717265715099416], [17.14142918586731, 60.71694298088801], [17.141590118408203, 60.71659925226872]]
     }
   }, {
     "type": "Feature",
@@ -25558,7 +25558,7 @@ function _default() {
   var gavle = [60.719459, 17.054273];
   var sverige = [63.031926, 15.451756];
 
-  var map = _leaflet.default.map("map").setView(gavle, 10);
+  var map = _leaflet.default.map("map").setView(gavle, 12);
 
   var orto = _leaflet.default.tileLayer.wms("https://stompunkt.lantmateriet.se/maps/ortofoto/wms/v1.3", {
     layers: "Ortofoto_0.16,Ortofoto_0.25,Ortofoto_0.4,Ortofoto_0.5",
@@ -25608,16 +25608,34 @@ function _default() {
     }
   });
 
+  var pois = _leaflet.default.geoJSON([_brannsagen.default, _gavlean.default, _forsby.default], {
+    style: {
+      color: "#0000ff",
+      weight: 5
+    },
+    filter: function filter(feature, layer) {
+      return feature.properties.typ != "fors";
+    },
+    onEachFeature: function onEachFeature(feature, layer) {
+      console.log("onEachFeature", feature.properties);
+      layer.bindTooltip(feature.properties.namn, {
+        sticky: true
+      });
+    }
+  });
+
   var baseMaps = {
     "Topowebb ": topowebb,
     "Ortofoto": orto,
     "Streets": streets
   };
   var overlayMaps = {
-    "Forsar": forsar
+    "Forsar": forsar,
+    "POIs": pois
   };
   topowebb.addTo(map);
   forsar.addTo(map);
+  pois.addTo(map);
 
   _leaflet.default.control.layers(baseMaps, overlayMaps).addTo(map);
 }
