@@ -128,7 +128,7 @@ mainContent model =
 sidebar : Element msg
 sidebar =
     row
-        [ width (px 500)
+        [ width (px 300)
         , height fill
         , Element.clip
         , Element.htmlAttribute (HtmlAttr.style "flex-shrink" "1")
