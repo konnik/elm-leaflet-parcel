@@ -1,13 +1,6 @@
 import L from 'leaflet';
 
-import testeboan from "./forsar/brannsagen";
-import gavlean from "./forsar/gavlean";
-import forsby from "./forsar/forsby";
-import vavaren from "./forsar/vavaren";
-
-const forsarGeo =  [testeboan, gavlean, forsby, vavaren ]
-
-export default function() {
+export function init(forsarGeo) {
     delete L.Icon.Default.prototype._getIconUrl;
 
     L.Icon.Default.mergeOptions({
@@ -20,7 +13,7 @@ export default function() {
     const gavle = [60.719459, 17.094273];
     const sverige = [63.031926, 15.451756]
 
-    var map = L.map("map").setView(gavle, 11);
+    const map = L.map("map").setView(gavle, 11);
 
     const orto = L.tileLayer.wms("https://stompunkt.lantmateriet.se/maps/ortofoto/wms/v1.3", {
         layers: "Ortofoto_0.16,Ortofoto_0.25,Ortofoto_0.4,Ortofoto_0.5",
@@ -30,7 +23,6 @@ export default function() {
 
         detectRetina: true
     });
-
 
     const streets = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
@@ -60,7 +52,6 @@ export default function() {
             return feature.properties.typ == "fors";
         },
         onEachFeature:  (feature, layer) => {
-            console.log("onEachFeature", feature.properties)
             if (feature.properties.typ === "fors") {
 
                 layer.bindTooltip(feature.properties.namn + " (" + feature.properties.vattendrag + ")", {
@@ -76,11 +67,9 @@ export default function() {
             weight: 5
         },
         filter: (feature, layer) => {
-            console.log(feature.properties)
             return feature.properties.typ != "fors";
         },
         onEachFeature:  (feature, layer) => {
-            console.log("onEachFeature", feature.properties)
             layer.bindTooltip(feature.properties.namn, {
                 sticky : true
             });
@@ -103,5 +92,6 @@ export default function() {
     pois.addTo(map);
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-
+    return map;
 }
+

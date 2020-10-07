@@ -1,13 +1,15 @@
 module Main exposing (main)
 
 import Browser
-import Element exposing (Element, alignBottom, alignLeft, alignRight, centerX, centerY, column, el, fill, height, inFront, layout, padding, paragraph, px, rgb255, row, shrink, spacing, text, width)
-import Element.Background as Background
+import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, inFront, layout, padding, paragraph, px, rgb255, row, shrink, spacing, text, width)
+import Element.Background as Bg
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Fors
 import Html exposing (Attribute, Html, div, h1)
 import Html.Attributes as HtmlAttr
+import Karta
 
 
 type alias Model =
@@ -20,7 +22,9 @@ type Msg
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { showSidebar = False }, Cmd.none )
+    ( { showSidebar = False }
+    , Cmd.none
+    )
 
 
 
@@ -32,7 +36,7 @@ update msg model =
     case msg of
         ToggleSidebar ->
             ( { model | showSidebar = not model.showSidebar }
-            , Cmd.none
+            , Karta.invalidera
             )
 
 
@@ -66,7 +70,13 @@ header =
     let
         testBtn : Element Msg
         testBtn =
-            Input.button [] { label = text "test", onPress = Just ToggleSidebar }
+            Input.button
+                [ Border.width 1
+                , Border.rounded 5
+                , padding 5
+                , Bg.color lightBlue
+                ]
+                { label = text "Forsinfo", onPress = Just ToggleSidebar }
     in
     row
         [ padding 10
@@ -103,7 +113,7 @@ mainContent model =
     row
         [ width fill
         , height fill
-        , Background.color white
+        , Bg.color white
         ]
     <|
         [ mapView ]
@@ -117,8 +127,23 @@ mainContent model =
 
 sidebar : Element msg
 sidebar =
-    el [ width (px 200), height fill, padding 20 ] <|
-        text "Forsinfo"
+    row
+        [ width (px 500)
+        , height fill
+        , Element.clip
+        , Element.htmlAttribute (HtmlAttr.style "flex-shrink" "1")
+        ]
+        [ el [ width (px 5), Bg.color blue, height fill ] Element.none
+        , el
+            [ padding 20
+            , alignTop
+            , width fill
+            , height fill
+            , Element.scrollbarY
+            ]
+          <|
+            Fors.beskrivning
+        ]
 
 
 mapView : Element msg
