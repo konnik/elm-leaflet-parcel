@@ -10,7 +10,7 @@ const karta = init([testeboan, gavlean, forsby, vavaren ]);
 
 app.ports.karta.subscribe(function(message) {
     if (message.type === "invalidera") {
-        setTimeout(function() { karta.invalidateSize() },1);
+        setTimeout(function() { karta.invalidateSize() },50);
     }
 });
 
