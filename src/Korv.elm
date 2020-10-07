@@ -105,7 +105,7 @@ container =
     el
         [ width fill
         , height fill
-        , scrollbars
+        , scrollbarY
         ]
         mybox
 
