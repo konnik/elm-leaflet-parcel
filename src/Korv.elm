@@ -3,6 +3,7 @@ module Korv exposing (..)
 import Element exposing (..)
 import Element.Background as Bg
 import Html exposing (Html)
+import Html.Attributes
 
 
 main : Html msg
@@ -24,6 +25,8 @@ viewColFirst =
         , row
             [ height fill
             , width fill
+            , Element.clip
+            , Element.htmlAttribute (Html.Attributes.style "flex-shrink" "1")
             ]
             [ left, container, right ]
         , bottom
