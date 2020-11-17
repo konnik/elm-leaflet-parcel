@@ -9,6 +9,26 @@ export function init(forsarGeo) {
     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
     });
 
+    var customIcons = { 
+        parkering : L.icon({
+            iconUrl: require("./images/parkering.png"),
+            iconSize:     [32, 32], // size of the icon
+            iconAnchor:   [16, 16], // point of the icon which will correspond to marker's location
+            popupAnchor:  [0, 0] // point from which the popup should open relative to the iconAnchor
+            }),
+        putin : L.icon({
+            iconUrl: require("./images/putin.png"),
+            iconSize:     [32, 32], // size of the icon
+            iconAnchor:   [16, 16], // point of the icon which will correspond to marker's location
+            popupAnchor:  [0, 0] // point from which the popup should open relative to the iconAnchor
+            }),
+        takeout : L.icon({
+            iconUrl: require("./images/takeout.png"),
+            iconSize:     [32, 32], // size of the icon
+            iconAnchor:   [16, 16], // point of the icon which will correspond to marker's location
+            popupAnchor:  [0, 0] // point from which the popup should open relative to the iconAnchor
+            })
+        }
 
     const gavle = [60.719459, 17.094273];
     const sverige = [63.031926, 15.451756]
@@ -46,7 +66,7 @@ export function init(forsarGeo) {
     const forsar = L.geoJSON(forsarGeo, {
         style: {
             color: "#0000ff",
-            weight: 5
+            weight: 7
         },
         filter: (feature, layer) => {
             return feature.properties.typ == "fors";
@@ -63,11 +83,14 @@ export function init(forsarGeo) {
 
     const pois = L.geoJSON(forsarGeo, {
         style: {
-            color: "#0000ff",
+            color: "#00ffff",
             weight: 5
         },
         filter: (feature, layer) => {
             return feature.properties.typ != "fors";
+        },
+        pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {icon: customIcons[feature.properties.typ]});
         },
         onEachFeature:  (feature, layer) => {
             layer.bindTooltip(feature.properties.namn, {
@@ -91,6 +114,26 @@ export function init(forsarGeo) {
     forsar.addTo(map);
     pois.addTo(map);
     L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+
+    map.on('zoomend', function() {
+        var zoomlevel = map.getZoom();
+            if (zoomlevel  <14){
+                if (map.hasLayer(pois)) {
+                    map.removeLayer(pois);
+                } else {
+                    console.log("no point layer active");
+                }
+            }
+            if (zoomlevel >= 14){
+                if (map.hasLayer(pois)){
+                    console.log("layer already added");
+                } else {
+                    map.addLayer(pois);
+                }
+            }
+        console.log("Current Zoom Level =" + zoomlevel)
+        });
 
     return map;
 }
