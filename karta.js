@@ -112,7 +112,7 @@ export function init(forsarGeo) {
     
     topowebb.addTo(map);
     forsar.addTo(map);
-    pois.addTo(map);
+    //pois.addTo(map);
     L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 
