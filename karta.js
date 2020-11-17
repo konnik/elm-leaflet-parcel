@@ -30,7 +30,7 @@ export function init(forsarGeo) {
             })
         }
 
-    const gavle = [60.719459, 17.094273];
+    const gavle = [60.72975, 17.12693];
     const sverige = [63.031926, 15.451756]
 
     const map = L.map("map").setView(gavle, 11);
