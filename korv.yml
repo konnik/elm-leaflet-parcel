@@ -1,0 +1,9 @@
+# testar att redigera en yml-fil direkt i github
+apa: korv
+biff: snabel
+antal: 67
+skills:
+ - baka
+ - städa
+ - tvätta
+kolon: "en text med kolon: 1234"
