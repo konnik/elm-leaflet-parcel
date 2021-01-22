@@ -141,7 +141,7 @@ subscriptions model =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Application Title"
+    { title = "Forsguiden Admin"
     , body =
         [ div []
             [ p []
