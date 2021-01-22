@@ -8,7 +8,7 @@
     "dev:admin": "parcel admin.html -d ./dist/admin -o index.html",
     "dev:web": "parcel index.html",
     "build:web": "parcel build index.html",
-    "build:admin": "parcel build admin.html -d ./dist/admin -o index.html",
+    "build:admin": "parcel build admin.html -d ./dist/admin -o index.html --public-url ./",
     "build": "npm run build:web && npm run build:admin",
     "deploy-deprecated": "npm run build && ./deploy.sh"
   },
