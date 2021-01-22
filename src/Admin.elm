@@ -3,6 +3,8 @@ module Admin exposing (Model, Msg, init, subscriptions, update, view)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
+import Http
+import Json.Decode as D
 import Url
 
 
@@ -21,18 +23,36 @@ main =
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
-    , korv : String
+    , forsar : List Fors
     }
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( Model key url "Hej korv", Cmd.none )
+    ( Model key url [], hamtaForsar )
+
+
+hamtaForsar : Cmd Msg
+hamtaForsar =
+    Http.get
+        { url = "https://forsguden-api.herokuapp.com/forsstracka"
+        , expect = Http.expectJson GotForsar (D.field "forsstracka" (D.list forsDecoder))
+        }
+
+
+forsDecoder : D.Decoder Fors
+forsDecoder =
+    D.map2 Fors
+        (D.field "id" D.int)
+        (D.field "namn" D.string)
+
+
+type alias Fors =
+    { id : Int, namn : String }
 
 
 type Msg
-    = Msg1
-    | Msg2
+    = GotForsar (Result Http.Error (List Fors))
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
 
@@ -40,10 +60,10 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Msg1 ->
-            ( model, Cmd.none )
+        GotForsar (Ok forsar) ->
+            ( { model | forsar = forsar }, Cmd.none )
 
-        Msg2 ->
+        GotForsar (Err err) ->
             ( model, Cmd.none )
 
         UrlRequested urlRequest ->
@@ -70,6 +90,6 @@ view model =
     { title = "Application Title"
     , body =
         [ div []
-            [ text "New Application" ]
+            [ text <| "Antal forsar: " ++ String.fromInt (List.length model.forsar) ]
         ]
     }
