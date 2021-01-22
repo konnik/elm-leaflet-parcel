@@ -35,7 +35,7 @@ init flags url key =
 hamtaForsar : Cmd Msg
 hamtaForsar =
     Http.get
-        { url = "https://forsguden-api.herokuapp.com/forsstracka"
+        { url = "https://forsguiden-api.herokuapp.com/forsstracka"
         , expect = Http.expectJson GotForsar (D.field "forsstracka" (D.list forsDecoder))
         }
 
