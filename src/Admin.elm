@@ -4,7 +4,7 @@ import Api exposing (Fors, Lan, Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, alignRight, column, fill, height, padding, px, row, spacing, text, width)
+import Element exposing (Element, alignRight, column, el, fill, height, padding, px, row, spacing, text, width)
 import Element.Font as Font
 import Html exposing (Html)
 import Http
@@ -153,7 +153,7 @@ authView : AuthState -> Browser.Document Msg
 authView authState =
     { title = "Forsguiden Admin"
     , body =
-        [ Element.layout [ width fill ] <|
+        [ Element.layout [ width fill, height fill, padding 20 ] <|
             case authState of
                 LoggarIn ->
                     text "Loggar in..."
@@ -173,6 +173,7 @@ view model =
         [ model.anvandare
             |> Maybe.map inloggadSomView
             |> Maybe.withDefault Element.none
+        , el [ Font.size 40 ] (text "Forsguiden admin")
         , sektionView "Forsar" (List.length model.forsar) <|
             forsarView model.forsar
         , sektionView "Vattendrag" (List.length model.vattendrag) <|
@@ -185,7 +186,7 @@ view model =
 sektionView : String -> Int -> Element msg -> Element msg
 sektionView rubrik antal innehall =
     column [ spacing 20 ]
-        [ Element.el [ Font.bold ] (text <| rubrik ++ " (" ++ String.fromInt antal ++ ")")
+        [ el [ Font.bold ] (text <| rubrik ++ " (" ++ String.fromInt antal ++ ")")
         , innehall
         ]
 
