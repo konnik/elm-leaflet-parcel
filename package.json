@@ -4,9 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "parcel index.html",
-    "build": "rm -rf ./dist && parcel build index.html --public-url ./",
-    "deploy": "npm run build && ./deploy.sh"
+    "clean": "rm -rf ./dist ",
+    "dev:admin": "parcel admin.html -d ./dist/admin -o index.html",
+    "dev:web": "parcel index.html",
+    "build:web": "parcel build index.html",
+    "build:admin": "parcel build admin.html -d ./dist/admin -o index.html",
+    "build": "npm run build:web && npm run build:admin",
+    "deploy-deprecated": "npm run build && ./deploy.sh"
   },
   "author": "",
   "license": "ISC",
