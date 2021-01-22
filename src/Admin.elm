@@ -1,5 +1,6 @@
 module Admin exposing (Model, Msg, init, subscriptions, update)
 
+import Api exposing (Fors, Lan, Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
@@ -40,18 +41,6 @@ type alias Model =
     }
 
 
-type alias Fors =
-    { id : Int, namn : String }
-
-
-type alias Vattendrag =
-    { id : Int, namn : String }
-
-
-type alias Lan =
-    { id : Int, namn : String }
-
-
 type Msg
     = GotForsar (Result Http.Error (List Fors))
     | GotVattendrag (Result Http.Error (List Vattendrag))
@@ -83,9 +72,9 @@ init flags url key =
             , Cmd.batch
                 [ Auth.rensaUrl url key
                 , Auth.hamtaAnvandare auth.token GotUser
-                , hamtaForsar
-                , hamtaVattendrag
-                , hamtaLan
+                , Api.hamtaForsar GotForsar
+                , Api.hamtaVattendrag GotVattendrag
+                , Api.hamtaLan GotLan
                 ]
             )
 
@@ -147,51 +136,6 @@ update msg model =
             ( { model | url = url }
             , Cmd.none
             )
-
-
-hamtaForsar : Cmd Msg
-hamtaForsar =
-    Http.get
-        { url = "https://forsguiden-api.herokuapp.com/forsstracka"
-        , expect = Http.expectJson GotForsar (D.field "forsstracka" (D.list forsDecoder))
-        }
-
-
-forsDecoder : D.Decoder Fors
-forsDecoder =
-    D.map2 Fors
-        (D.field "id" D.int)
-        (D.field "namn" D.string)
-
-
-hamtaVattendrag : Cmd Msg
-hamtaVattendrag =
-    Http.get
-        { url = "https://forsguiden-api.herokuapp.com/vattendrag"
-        , expect = Http.expectJson GotVattendrag (D.field "vattendrag" (D.list vattendragDecoder))
-        }
-
-
-vattendragDecoder : D.Decoder Vattendrag
-vattendragDecoder =
-    D.map2 Vattendrag
-        (D.field "id" D.int)
-        (D.field "namn" D.string)
-
-
-hamtaLan : Cmd Msg
-hamtaLan =
-    Http.get
-        { url = "https://forsguiden-api.herokuapp.com/lan"
-        , expect = Http.expectJson GotLan (D.field "lan" (D.list lanDecoder))
-        }
-
-
-lanDecoder : D.Decoder Lan
-lanDecoder =
-    D.map2 Lan
-        (D.field "id" D.int)
-        (D.field "namn" D.string)
 
 
 subscriptions : AuthState -> Sub Msg
