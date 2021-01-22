@@ -4,7 +4,9 @@ import Api exposing (Fors, Lan, Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (..)
+import Element exposing (Element, alignRight, column, fill, height, padding, px, row, spacing, text, width)
+import Element.Font as Font
+import Html exposing (Html)
 import Http
 import Json.Decode as D
 import OAuth
@@ -70,8 +72,8 @@ init flags url key =
                 , vattendrag = []
                 }
             , Cmd.batch
-                [ Auth.rensaUrl url key
-                , Auth.hamtaAnvandare auth.token GotUser
+                [ Auth.hamtaAnvandare auth.token GotUser
+                , Auth.rensaUrl url key
                 , Api.hamtaForsar GotForsar
                 , Api.hamtaVattendrag GotVattendrag
                 , Api.hamtaLan GotLan
@@ -151,57 +153,76 @@ authView : AuthState -> Browser.Document Msg
 authView authState =
     { title = "Forsguiden Admin"
     , body =
-        [ case authState of
-            LoggarIn ->
-                text "Loggar in..."
+        [ Element.layout [ width fill ] <|
+            case authState of
+                LoggarIn ->
+                    text "Loggar in..."
 
-            Inloggad model ->
-                view model
+                Inloggad model ->
+                    view model
 
-            MisslyckadInloggning ->
-                text "Inloggning misslyckades!"
+                MisslyckadInloggning ->
+                    text "Inloggning misslyckades!"
         ]
     }
 
 
-view : Model -> Html Msg
+view : Model -> Element Msg
 view model =
-    div []
-        [ p [] [ text <| "Inloggad som: " ++ (Maybe.map .namn model.anvandare |> Maybe.withDefault "?") ]
-        , p []
-            [ text <| "Forsar (" ++ String.fromInt (List.length model.forsar) ++ ")"
-            , div [] [ forsarView model.forsar ]
-            ]
-        , p []
-            [ text <| "Vattendrag (" ++ String.fromInt (List.length model.vattendrag) ++ ")"
-            , div [] [ vattendragView model.vattendrag ]
-            ]
-        , p []
-            [ text <| "Län (" ++ String.fromInt (List.length model.lan) ++ ")"
-            , div [] [ lanView model.lan ]
-            ]
+    column [ spacing 30, width fill ]
+        [ model.anvandare
+            |> Maybe.map inloggadSomView
+            |> Maybe.withDefault Element.none
+        , sektionView "Forsar" (List.length model.forsar) <|
+            forsarView model.forsar
+        , sektionView "Vattendrag" (List.length model.vattendrag) <|
+            vattendragView model.vattendrag
+        , sektionView "Län" (List.length model.lan) <|
+            lanView model.lan
         ]
 
 
-forsarView : List Fors -> Html msg
+sektionView : String -> Int -> Element msg -> Element msg
+sektionView rubrik antal innehall =
+    column [ spacing 20 ]
+        [ Element.el [ Font.bold ] (text <| rubrik ++ " (" ++ String.fromInt antal ++ ")")
+        , innehall
+        ]
+
+
+inloggadSomView : UserInfo -> Element msg
+inloggadSomView { namn, bild } =
+    row [ alignRight, spacing 20 ]
+        [ text <| namn
+        , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
+        ]
+
+
+forsarView : List Fors -> Element msg
 forsarView forsar =
     forsar
         |> List.map .namn
         |> String.join ", "
         |> text
+        |> List.singleton
+        |> Element.paragraph []
 
 
-vattendragView : List Vattendrag -> Html msg
+vattendragView : List Vattendrag -> Element msg
 vattendragView vattendrag =
     vattendrag
         |> List.map .namn
         |> String.join ", "
         |> text
+        |> List.singleton
+        |> Element.paragraph []
 
 
-lanView : List Lan -> Html msg
+lanView : List Lan -> Element msg
 lanView lan =
     lan
         |> List.map .namn
         |> String.join ", "
         |> text
+        |> List.singleton
+        |> Element.paragraph []
