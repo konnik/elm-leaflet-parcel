@@ -1,11 +1,14 @@
 module Admin exposing (Model, Msg, init, subscriptions, update)
 
+import Admin.Route as Route exposing (Route)
+import Admin.Vattendrag as VattendragPage
 import Api exposing (Fors, Lan, Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
 import Element exposing (Element, alignRight, column, el, fill, height, padding, px, row, spacing, text, width)
 import Element.Font as Font
+import Element.Input
 import Html exposing (Html)
 import Http
 import Json.Decode as D
@@ -35,11 +38,17 @@ type AuthState
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
-    , auth : Implicit.AuthorizationSuccess
-    , anvandare : Maybe UserInfo
+    , session : Auth.Session
     , forsar : List Fors
     , vattendrag : List Vattendrag
     , lan : List Lan
+    , vattendragModel : VattendragPage.Model
+    , route : Route
+    }
+
+
+type alias Pages =
+    { vattendrag : VattendragPage.Model
     }
 
 
@@ -48,8 +57,14 @@ type Msg
     | GotVattendrag (Result Http.Error (List Vattendrag))
     | GotLan (Result Http.Error (List Lan))
     | GotUser (Result Http.Error UserInfo)
+    | RedigeraVattendrag Vattendrag
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
+    | VattendragMsg VattendragPage.Msg
+
+
+
+-- INIT
 
 
 init : () -> Url.Url -> Nav.Key -> ( AuthState, Cmd Msg )
@@ -61,22 +76,31 @@ init flags url key =
         Implicit.Error _ ->
             ( MisslyckadInloggning, Cmd.none )
 
-        Implicit.Success auth ->
+        Implicit.Success result ->
+            let
+                session =
+                    Auth.intieraSession result
+
+                ( vattendragModel, vattendragCmd ) =
+                    VattendragPage.init session
+            in
             ( Inloggad
                 { key = key
                 , url = url
-                , auth = auth
-                , anvandare = Nothing
+                , session = session
                 , lan = []
                 , forsar = []
                 , vattendrag = []
+                , vattendragModel = vattendragModel
+                , route = Route.Dashboard
                 }
             , Cmd.batch
-                [ Auth.hamtaAnvandare auth.token GotUser
+                [ Auth.hamtaAnvandare result.token GotUser
                 , Auth.rensaUrl url key
                 , Api.hamtaForsar GotForsar
                 , Api.hamtaVattendrag GotVattendrag
                 , Api.hamtaLan GotLan
+                , Cmd.map VattendragMsg vattendragCmd
                 ]
             )
 
@@ -102,8 +126,29 @@ authUpdate msg authState =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        RedigeraVattendrag vattendrag ->
+            VattendragPage.redigera model.session vattendrag
+                |> Tuple.mapFirst
+                    (\m ->
+                        { model
+                            | vattendragModel = m
+                            , route = Route.RedigeraVattendrag
+                        }
+                    )
+                |> Tuple.mapSecond (Cmd.map VattendragMsg)
+
+        VattendragMsg pageMsg ->
+            VattendragPage.update model.session pageMsg model.vattendragModel
+                |> Tuple.mapFirst (\m -> { model | vattendragModel = m })
+                |> Tuple.mapSecond (Cmd.map VattendragMsg)
+
         GotUser (Ok anvandare) ->
-            ( { model | anvandare = Just anvandare }, Cmd.none )
+            ( { model
+                | session =
+                    anvandare |> Auth.associeraMedSession model.session
+              }
+            , Cmd.none
+            )
 
         GotUser (Err _) ->
             ( model, Cmd.none )
@@ -170,10 +215,33 @@ authView authState =
 view : Model -> Element Msg
 view model =
     column [ spacing 30, width fill ]
-        [ model.anvandare
-            |> Maybe.map inloggadSomView
-            |> Maybe.withDefault Element.none
-        , el [ Font.size 40 ] (text "Forsguiden admin")
+        [ headerView model
+        , case model.route of
+            Route.Dashboard ->
+                dashboardView model
+
+            Route.RedigeraVattendrag ->
+                VattendragPage.view model.vattendragModel |> Element.map VattendragMsg
+        ]
+
+
+headerView : Model -> Element Msg
+headerView model =
+    case model.session.anvandare of
+        Nothing ->
+            Element.none
+
+        Just { namn, bild } ->
+            row [ alignRight, spacing 20 ]
+                [ text <| namn
+                , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
+                ]
+
+
+dashboardView : Model -> Element Msg
+dashboardView model =
+    column [ spacing 30 ]
+        [ el [ Font.size 40 ] (text "Forsguiden admin")
         , sektionView "Forsar" (List.length model.forsar) <|
             forsarView model.forsar
         , sektionView "Vattendrag" (List.length model.vattendrag) <|
@@ -191,14 +259,6 @@ sektionView rubrik antal innehall =
         ]
 
 
-inloggadSomView : UserInfo -> Element msg
-inloggadSomView { namn, bild } =
-    row [ alignRight, spacing 20 ]
-        [ text <| namn
-        , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
-        ]
-
-
 forsarView : List Fors -> Element msg
 forsarView forsar =
     forsar
@@ -209,13 +269,18 @@ forsarView forsar =
         |> Element.paragraph []
 
 
-vattendragView : List Vattendrag -> Element msg
+vattendragView : List Vattendrag -> Element Msg
 vattendragView vattendrag =
+    let
+        link v =
+            Element.Input.button []
+                { label = text v.namn
+                , onPress = Just (RedigeraVattendrag v)
+                }
+    in
     vattendrag
-        |> List.map .namn
-        |> String.join ", "
-        |> text
-        |> List.singleton
+        |> List.map link
+        |> List.intersperse (text ", ")
         |> Element.paragraph []
 
 

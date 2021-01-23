@@ -1,4 +1,4 @@
-module Auth exposing (UserInfo, hamtaAnvandare, loggaIn, rensaUrl)
+module Auth exposing (Session, UserInfo, associeraMedSession, hamtaAnvandare, intieraSession, loggaIn, rensaUrl)
 
 import Browser.Navigation as Nav exposing (Key)
 import Http
@@ -8,10 +8,30 @@ import OAuth.Implicit as Implicit
 import Url exposing (Url)
 
 
+type alias Session =
+    { token : OAuth.Token
+    , scope : List String
+    , anvandare : Maybe UserInfo
+    }
+
+
 type alias UserInfo =
     { namn : String
     , bild : String
     }
+
+
+intieraSession : Implicit.AuthorizationSuccess -> Session
+intieraSession authSuccess =
+    { token = authSuccess.token
+    , scope = authSuccess.scope
+    , anvandare = Nothing
+    }
+
+
+associeraMedSession : Session -> UserInfo -> Session
+associeraMedSession session anvandare =
+    { session | anvandare = Just anvandare }
 
 
 authEndpoint : Url
