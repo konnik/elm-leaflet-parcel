@@ -1,6 +1,7 @@
 module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag)
 
 import Auth exposing (hamtaAnvandare)
+import Fors exposing (beskrivning)
 import Http
 import Json.Decode as D
 
@@ -10,7 +11,11 @@ type alias Fors =
 
 
 type alias Vattendrag =
-    { id : Int, namn : String }
+    { id : Int
+    , namn : String
+    , beskrivning : String
+    , lan : List Lan
+    }
 
 
 type alias Lan =
@@ -42,9 +47,11 @@ hamtaVattendrag toMsg =
 
 vattendragDecoder : D.Decoder Vattendrag
 vattendragDecoder =
-    D.map2 Vattendrag
+    D.map4 Vattendrag
         (D.field "id" D.int)
         (D.field "namn" D.string)
+        (D.field "beskrivning" D.string)
+        (D.field "lan" (D.list lanDecoder))
 
 
 hamtaLan : (Result Http.Error (List Lan) -> msg) -> Cmd msg
