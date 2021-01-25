@@ -14,6 +14,8 @@ type alias Model =
     , namn : String
     , beskrivning : String
     , lan : String
+    , bekraftaRadering : Bool
+    , raderad : Bool
     }
 
 
@@ -23,6 +25,9 @@ type Msg
     | InputLan String
     | Spara
     | SparaResult (Result Http.Error Vattendrag)
+    | Radera
+    | RaderaBekraftad
+    | RaderaResult (Result Http.Error ())
 
 
 init : Session -> ( Model, Cmd Msg )
@@ -32,7 +37,15 @@ init =
 
 nytt : Session -> ( Model, Cmd Msg )
 nytt session =
-    ( { id = Nothing, namn = "", beskrivning = "", lan = "" }, Cmd.none )
+    ( { id = Nothing
+      , namn = ""
+      , beskrivning = ""
+      , lan = ""
+      , bekraftaRadering = False
+      , raderad = False
+      }
+    , Cmd.none
+    )
 
 
 redigera : Session -> Vattendrag -> ( Model, Cmd Msg )
@@ -41,6 +54,8 @@ redigera session vattendrag =
       , namn = vattendrag.namn
       , beskrivning = vattendrag.beskrivning
       , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
+      , bekraftaRadering = False
+      , raderad = False
       }
     , Cmd.none
     )
@@ -49,6 +64,18 @@ redigera session vattendrag =
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
+        Radera ->
+            ( { model | bekraftaRadering = True }, Cmd.none )
+
+        RaderaBekraftad ->
+            ( { model | bekraftaRadering = True }, Cmd.none )
+
+        RaderaResult (Ok ()) ->
+            ( { model | bekraftaRadering = False }, Cmd.none )
+
+        RaderaResult (Err err) ->
+            ( model, Cmd.none )
+
         Spara ->
             validera model
                 |> Result.map
@@ -100,15 +127,37 @@ view : Model -> Element Msg
 view model =
     let
         rubrik =
-            model.id |> Maybe.map (always "Redigera vattendrag") |> Maybe.withDefault "Nytt vattendrag"
+            if model.raderad then
+                "Vattendraget har raderats."
+
+            else
+                model.id |> Maybe.map (always "Redigera vattendrag") |> Maybe.withDefault "Nytt vattendrag"
     in
-    column [ spacing 20 ]
-        [ el [ Font.size 30 ] (text rubrik)
-        , input "Namn" model.namn InputNamn
-        , input "Län" model.lan InputLan
-        , textbox "Beskrivning" model.beskrivning InputBeskr
-        , knapp "Spara" Spara
-        ]
+    if model.raderad then
+        el [ Font.size 30 ] (text rubrik)
+
+    else
+        column [ spacing 20 ]
+            [ el [ Font.size 30 ] (text rubrik)
+            , input "Namn" model.namn InputNamn
+            , input "Län" model.lan InputLan
+            , textbox "Beskrivning" model.beskrivning InputBeskr
+            , knapp "Spara" Spara
+            , if model.id /= Nothing then
+                column [ spacing 20 ]
+                    [ el [] <| text "-----  DANGER ZONE -----"
+                    , if model.bekraftaRadering then
+                        knapp
+                            "Bekräfta radering"
+                            RaderaBekraftad
+
+                      else
+                        knapp "Radera" Radera
+                    ]
+
+              else
+                Element.none
+            ]
 
 
 input : String -> String -> (String -> msg) -> Element msg
