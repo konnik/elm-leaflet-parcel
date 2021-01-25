@@ -1,4 +1,4 @@
-module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, sparaVattendrag)
+module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, uppdateraVattendrag)
 
 import Auth exposing (Session)
 import Http
@@ -21,6 +21,10 @@ type alias Vattendrag =
 
 type alias Lan =
     { id : Int, namn : String }
+
+
+
+-- forsar
 
 
 hamtaForsar : (Result Http.Error (List Fors) -> msg) -> Cmd msg
@@ -50,8 +54,8 @@ hamtaVattendrag toMsg =
         }
 
 
-sparaVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
-sparaVattendrag session vattendrag toMsg =
+nyttVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
+nyttVattendrag session vattendrag toMsg =
     let
         lanJson : E.Value
         lanJson =
@@ -83,6 +87,39 @@ sparaVattendrag session vattendrag toMsg =
         }
 
 
+uppdateraVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
+uppdateraVattendrag session vattendrag toMsg =
+    let
+        lanJson : E.Value
+        lanJson =
+            vattendrag.lan
+                |> E.list
+                    (\x ->
+                        E.object
+                            [ ( "id", E.int x.id )
+                            , ( "namn", E.string x.namn )
+                            ]
+                    )
+
+        body =
+            E.object <|
+                [ ( "id", E.int vattendrag.id )
+                , ( "namn", E.string vattendrag.namn )
+                , ( "beskrivning", E.string vattendrag.beskrivning )
+                , ( "lan", lanJson )
+                ]
+    in
+    Http.request
+        { method = "PUT"
+        , url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt vattendrag.id
+        , headers = OAuth.useToken session.token []
+        , expect = Http.expectJson toMsg vattendragDecoder
+        , body = Http.jsonBody body
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
 vattendragDecoder : D.Decoder Vattendrag
 vattendragDecoder =
     D.map4 Vattendrag
@@ -90,6 +127,10 @@ vattendragDecoder =
         (D.field "namn" D.string)
         (D.field "beskrivning" D.string)
         (D.field "lan" (D.list lanDecoder))
+
+
+
+-- län
 
 
 hamtaLan : (Result Http.Error (List Lan) -> msg) -> Cmd msg

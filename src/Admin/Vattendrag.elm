@@ -1,4 +1,4 @@
-module Admin.Vattendrag exposing (Model, Msg, init, redigera, update, view)
+module Admin.Vattendrag exposing (Model, Msg, init, nytt, redigera, update, view)
 
 import Api exposing (Lan, Vattendrag)
 import Auth exposing (Session)
@@ -6,12 +6,11 @@ import Element exposing (Element, alignRight, column, el, padding, px, rgb255, r
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Fors exposing (beskrivning)
 import Http
 
 
 type alias Model =
-    { id : Int
+    { id : Maybe Int
     , namn : String
     , beskrivning : String
     , lan : String
@@ -27,13 +26,18 @@ type Msg
 
 
 init : Session -> ( Model, Cmd Msg )
-init session =
-    ( { id = -1, namn = "", beskrivning = "", lan = "" }, Cmd.none )
+init =
+    nytt
+
+
+nytt : Session -> ( Model, Cmd Msg )
+nytt session =
+    ( { id = Nothing, namn = "", beskrivning = "", lan = "" }, Cmd.none )
 
 
 redigera : Session -> Vattendrag -> ( Model, Cmd Msg )
 redigera session vattendrag =
-    ( { id = vattendrag.id
+    ( { id = Just vattendrag.id
       , namn = vattendrag.namn
       , beskrivning = vattendrag.beskrivning
       , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
@@ -46,7 +50,17 @@ update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
         Spara ->
-            ( model, validera model |> Result.map (sparaVattendrag session) |> Result.withDefault Cmd.none )
+            validera model
+                |> Result.map
+                    (\vattendrag ->
+                        case model.id of
+                            Just _ ->
+                                ( model, Api.uppdateraVattendrag session vattendrag SparaResult )
+
+                            Nothing ->
+                                ( model, Api.nyttVattendrag session vattendrag SparaResult )
+                    )
+                |> Result.withDefault ( model, Cmd.none )
 
         SparaResult (Ok vattendrag) ->
             redigera session vattendrag
@@ -75,22 +89,21 @@ validera model =
                 |> List.map (\id -> Lan id "")
     in
     Ok
-        { id = model.id
+        { id = model.id |> Maybe.withDefault -1
         , namn = model.namn
         , beskrivning = model.beskrivning
         , lan = lan
         }
 
 
-sparaVattendrag : Session -> Vattendrag -> Cmd Msg
-sparaVattendrag session vattendrag =
-    Api.sparaVattendrag session vattendrag SparaResult
-
-
 view : Model -> Element Msg
 view model =
+    let
+        rubrik =
+            model.id |> Maybe.map (always "Redigera vattendrag") |> Maybe.withDefault "Nytt vattendrag"
+    in
     column [ spacing 20 ]
-        [ el [ Font.size 30 ] (text "Redigera vattendrag")
+        [ el [ Font.size 30 ] (text rubrik)
         , input "Namn" model.namn InputNamn
         , input "Län" model.lan InputLan
         , textbox "Beskrivning" model.beskrivning InputBeskr

@@ -58,6 +58,7 @@ type Msg
     | GotLan (Result Http.Error (List Lan))
     | GotUser (Result Http.Error UserInfo)
     | RedigeraVattendrag Vattendrag
+    | NyttVattendrag
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | VattendragMsg VattendragPage.Msg
@@ -128,6 +129,17 @@ update msg model =
     case msg of
         RedigeraVattendrag vattendrag ->
             VattendragPage.redigera model.session vattendrag
+                |> Tuple.mapFirst
+                    (\m ->
+                        { model
+                            | vattendragModel = m
+                            , route = Route.RedigeraVattendrag
+                        }
+                    )
+                |> Tuple.mapSecond (Cmd.map VattendragMsg)
+
+        NyttVattendrag ->
+            VattendragPage.nytt model.session
                 |> Tuple.mapFirst
                     (\m ->
                         { model
@@ -242,19 +254,22 @@ dashboardView : Model -> Element Msg
 dashboardView model =
     column [ spacing 30 ]
         [ el [ Font.size 40 ] (text "Forsguiden admin")
-        , sektionView "Forsar" (List.length model.forsar) <|
+        , sektionView "Forsar" (List.length model.forsar) Nothing <|
             forsarView model.forsar
-        , sektionView "Vattendrag" (List.length model.vattendrag) <|
+        , sektionView "Vattendrag" (List.length model.vattendrag) (Just NyttVattendrag) <|
             vattendragView model.vattendrag
-        , sektionView "Län" (List.length model.lan) <|
+        , sektionView "Län" (List.length model.lan) Nothing <|
             lanView model.lan
         ]
 
 
-sektionView : String -> Int -> Element msg -> Element msg
-sektionView rubrik antal innehall =
+sektionView : String -> Int -> Maybe msg -> Element msg -> Element msg
+sektionView rubrik antal newMsg innehall =
     column [ spacing 20 ]
-        [ el [ Font.bold ] (text <| rubrik ++ " (" ++ String.fromInt antal ++ ")")
+        [ row [ spacing 30 ]
+            [ el [ Font.bold ] (text <| rubrik ++ " (" ++ String.fromInt antal ++ ")")
+            , Element.Input.button [] { label = text "[Nytt]", onPress = newMsg }
+            ]
         , innehall
         ]
 
