@@ -114,7 +114,7 @@ uppdateraVattendrag session vattendrag toMsg =
                 , ( "lan", lanJson )
                 ]
     in
-    post session
+    put session
         { url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt vattendrag.id
         , expect = Http.expectJson toMsg vattendragDecoder
         , body = Http.jsonBody body

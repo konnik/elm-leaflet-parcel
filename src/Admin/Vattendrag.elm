@@ -2,20 +2,29 @@ module Admin.Vattendrag exposing (Model, Msg, init, nytt, redigera, update, view
 
 import Api exposing (Lan, Vattendrag)
 import Auth exposing (Session)
-import Element exposing (Element, alignRight, column, el, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Element, alignRight, column, el, fill, padding, px, rgb255, row, spacing, text, width)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Http
 
 
-type alias Model =
-    { id : Maybe Int
-    , namn : String
+type Model
+    = SkapaNy Form
+    | Redigera Int Form
+    | Sparar
+    | SparadOk Vattendrag
+    | SparadFel
+    | BekraftaRadera Int Form
+    | Raderar
+    | RaderadOk
+    | RaderadFel
+
+
+type alias Form =
+    { namn : String
     , beskrivning : String
     , lan : String
-    , bekraftaRadering : Maybe Int
-    , raderad : Bool
     }
 
 
@@ -25,8 +34,9 @@ type Msg
     | InputLan String
     | Spara
     | SparaResult (Result Http.Error Vattendrag)
-    | Radera Int
-    | RaderaBekraftad Int
+    | Radera
+    | RaderaBekraftad
+    | RaderaAvbruten
     | RaderaResult (Result Http.Error ())
 
 
@@ -37,127 +47,159 @@ init =
 
 nytt : Session -> ( Model, Cmd Msg )
 nytt session =
-    ( { id = Nothing
-      , namn = ""
-      , beskrivning = ""
-      , lan = ""
-      , bekraftaRadering = Nothing
-      , raderad = False
-      }
+    ( SkapaNy
+        { namn = ""
+        , beskrivning = ""
+        , lan = ""
+        }
     , Cmd.none
     )
 
 
 redigera : Session -> Vattendrag -> ( Model, Cmd Msg )
 redigera session vattendrag =
-    ( { id = Just vattendrag.id
-      , namn = vattendrag.namn
-      , beskrivning = vattendrag.beskrivning
-      , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
-      , bekraftaRadering = Nothing
-      , raderad = False
-      }
+    ( Redigera vattendrag.id
+        { namn = vattendrag.namn
+        , beskrivning = vattendrag.beskrivning
+        , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
+        }
     , Cmd.none
     )
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
-    case msg of
-        Radera id ->
-            ( { model | bekraftaRadering = Just id }, Cmd.none )
+    case ( model, msg ) of
+        ( Redigera id form, Radera ) ->
+            ( BekraftaRadera id form, Cmd.none )
 
-        RaderaBekraftad id ->
-            ( model, Api.raderaVattendrag session id RaderaResult )
+        ( BekraftaRadera id form, RaderaBekraftad ) ->
+            ( Raderar, Api.raderaVattendrag session id RaderaResult )
 
-        RaderaResult (Ok ()) ->
-            ( { model | bekraftaRadering = Nothing }, Cmd.none )
+        ( BekraftaRadera id form, RaderaAvbruten ) ->
+            ( Redigera id form, Cmd.none )
 
-        RaderaResult (Err err) ->
-            ( model, Cmd.none )
+        ( Raderar, RaderaResult (Ok ()) ) ->
+            ( RaderadOk, Cmd.none )
 
-        Spara ->
-            validera model
+        ( Raderar, RaderaResult (Err err) ) ->
+            ( RaderadFel, Cmd.none )
+
+        ( SkapaNy form, Spara ) ->
+            validera -1 form
                 |> Result.map
                     (\vattendrag ->
-                        case model.id of
-                            Just _ ->
-                                ( model, Api.uppdateraVattendrag session vattendrag SparaResult )
-
-                            Nothing ->
-                                ( model, Api.nyttVattendrag session vattendrag SparaResult )
+                        ( Sparar, Api.nyttVattendrag session vattendrag SparaResult )
                     )
                 |> Result.withDefault ( model, Cmd.none )
 
-        SparaResult (Ok vattendrag) ->
-            redigera session vattendrag
+        ( Redigera id form, Spara ) ->
+            validera id form
+                |> Result.map
+                    (\vattendrag ->
+                        ( Sparar, Api.uppdateraVattendrag session vattendrag SparaResult )
+                    )
+                |> Result.withDefault ( model, Cmd.none )
 
-        SparaResult (Err err) ->
+        ( Sparar, SparaResult (Ok vattendrag) ) ->
+            --redigera session vattendrag
+            ( SparadOk vattendrag, Cmd.none )
+
+        ( Sparar, SparaResult (Err err) ) ->
+            ( SparadFel, Cmd.none )
+
+        -- form input
+        ( Redigera id form, InputNamn str ) ->
+            ( Redigera id { form | namn = str }, Cmd.none )
+
+        ( Redigera id form, InputBeskr str ) ->
+            ( Redigera id { form | beskrivning = str }, Cmd.none )
+
+        ( Redigera id form, InputLan str ) ->
+            ( Redigera id { form | lan = str }, Cmd.none )
+
+        ( SkapaNy form, InputNamn str ) ->
+            ( SkapaNy { form | namn = str }, Cmd.none )
+
+        ( SkapaNy form, InputBeskr str ) ->
+            ( SkapaNy { form | beskrivning = str }, Cmd.none )
+
+        ( SkapaNy form, InputLan str ) ->
+            ( SkapaNy { form | lan = str }, Cmd.none )
+
+        ( _, _ ) ->
             ( model, Cmd.none )
 
-        InputNamn str ->
-            ( { model | namn = str }, Cmd.none )
 
-        InputBeskr str ->
-            ( { model | beskrivning = str }, Cmd.none )
-
-        InputLan str ->
-            ( { model | lan = str }, Cmd.none )
-
-
-validera : Model -> Result String Vattendrag
-validera model =
+validera : Int -> Form -> Result String Vattendrag
+validera id form =
     let
         lan =
-            model.lan
+            form.lan
                 |> String.split ","
                 |> List.map String.trim
                 |> List.filterMap String.toInt
-                |> List.map (\id -> Lan id "")
+                |> List.map (\id_ -> Lan id_ "")
     in
     Ok
-        { id = model.id |> Maybe.withDefault -1
-        , namn = model.namn
-        , beskrivning = model.beskrivning
+        { id = id
+        , namn = form.namn
+        , beskrivning = form.beskrivning
         , lan = lan
         }
 
 
 view : Model -> Element Msg
 view model =
-    let
-        rubrik =
-            if model.raderad then
-                "Vattendraget har raderats."
+    case model of
+        SkapaNy form ->
+            column [ spacing 20 ]
+                [ el [ Font.size 30 ] (text "Lägg till nytt vattendrag")
+                , input "Namn" form.namn InputNamn
+                , input "Län" form.lan InputLan
+                , textbox "Beskrivning" form.beskrivning InputBeskr
+                , knapp "Spara" Spara
+                ]
 
-            else
-                model.id |> Maybe.map (\id -> "Redigera vattendrag (" ++ String.fromInt id ++ ")") |> Maybe.withDefault "Nytt vattendrag"
-    in
-    if model.raderad then
-        el [ Font.size 30 ] (text rubrik)
+        Redigera id form ->
+            column [ spacing 20 ]
+                [ el [ Font.size 30 ] (text <| "Redigera vattendrag (" ++ String.fromInt id ++ ")")
+                , input "Namn" form.namn InputNamn
+                , input "Län" form.lan InputLan
+                , textbox "Beskrivning" form.beskrivning InputBeskr
+                , knapp "Spara" Spara
+                , column [ spacing 20, width fill ]
+                    [ el [ alignRight ] <| text "DANGER ZONE BELOW"
+                    , el [ alignRight ] <| knapp "Radera" Radera
+                    ]
+                ]
 
-    else
-        column [ spacing 20 ]
-            [ el [ Font.size 30 ] (text rubrik)
-            , input "Namn" model.namn InputNamn
-            , input "Län" model.lan InputLan
-            , textbox "Beskrivning" model.beskrivning InputBeskr
-            , knapp "Spara" Spara
-            , case model.id of
-                Just id ->
-                    column [ spacing 20 ]
-                        [ el [] <| text "-----  DANGER ZONE -----"
-                        , case model.bekraftaRadering of
-                            Nothing ->
-                                knapp "Radera" (Radera id)
+        BekraftaRadera id form ->
+            column [ spacing 20 ]
+                [ text "Är du säker på att du vill radera vattendraget?"
+                , row [ spacing 20 ]
+                    [ knapp "Bekräfta radera" RaderaBekraftad
+                    , knapp "Avbryt" RaderaAvbruten
+                    ]
+                ]
 
-                            Just bekraftatId ->
-                                knapp "Bekräfta radering" (RaderaBekraftad bekraftatId)
-                        ]
+        Sparar ->
+            text "Sparar..."
 
-                Nothing ->
-                    Element.none
-            ]
+        SparadOk vattendrag ->
+            text "Vattendraget har sparats."
+
+        SparadFel ->
+            text "Kunde inte spara vattendrag."
+
+        Raderar ->
+            text "Raderar..."
+
+        RaderadOk ->
+            text "Vattendraget har raderats."
+
+        RaderadFel ->
+            text "Kunde inte radera vattendrag."
 
 
 input : String -> String -> (String -> msg) -> Element msg
