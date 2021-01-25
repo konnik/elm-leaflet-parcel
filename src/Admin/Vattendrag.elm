@@ -14,7 +14,7 @@ type alias Model =
     , namn : String
     , beskrivning : String
     , lan : String
-    , bekraftaRadering : Bool
+    , bekraftaRadering : Maybe Int
     , raderad : Bool
     }
 
@@ -25,8 +25,8 @@ type Msg
     | InputLan String
     | Spara
     | SparaResult (Result Http.Error Vattendrag)
-    | Radera
-    | RaderaBekraftad
+    | Radera Int
+    | RaderaBekraftad Int
     | RaderaResult (Result Http.Error ())
 
 
@@ -41,7 +41,7 @@ nytt session =
       , namn = ""
       , beskrivning = ""
       , lan = ""
-      , bekraftaRadering = False
+      , bekraftaRadering = Nothing
       , raderad = False
       }
     , Cmd.none
@@ -54,7 +54,7 @@ redigera session vattendrag =
       , namn = vattendrag.namn
       , beskrivning = vattendrag.beskrivning
       , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
-      , bekraftaRadering = False
+      , bekraftaRadering = Nothing
       , raderad = False
       }
     , Cmd.none
@@ -64,14 +64,14 @@ redigera session vattendrag =
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
-        Radera ->
-            ( { model | bekraftaRadering = True }, Cmd.none )
+        Radera id ->
+            ( { model | bekraftaRadering = Just id }, Cmd.none )
 
-        RaderaBekraftad ->
-            ( { model | bekraftaRadering = True }, Cmd.none )
+        RaderaBekraftad id ->
+            ( model, Api.raderaVattendrag session id RaderaResult )
 
         RaderaResult (Ok ()) ->
-            ( { model | bekraftaRadering = False }, Cmd.none )
+            ( { model | bekraftaRadering = Nothing }, Cmd.none )
 
         RaderaResult (Err err) ->
             ( model, Cmd.none )
@@ -131,7 +131,7 @@ view model =
                 "Vattendraget har raderats."
 
             else
-                model.id |> Maybe.map (always "Redigera vattendrag") |> Maybe.withDefault "Nytt vattendrag"
+                model.id |> Maybe.map (\id -> "Redigera vattendrag (" ++ String.fromInt id ++ ")") |> Maybe.withDefault "Nytt vattendrag"
     in
     if model.raderad then
         el [ Font.size 30 ] (text rubrik)
@@ -143,20 +143,20 @@ view model =
             , input "Län" model.lan InputLan
             , textbox "Beskrivning" model.beskrivning InputBeskr
             , knapp "Spara" Spara
-            , if model.id /= Nothing then
-                column [ spacing 20 ]
-                    [ el [] <| text "-----  DANGER ZONE -----"
-                    , if model.bekraftaRadering then
-                        knapp
-                            "Bekräfta radering"
-                            RaderaBekraftad
+            , case model.id of
+                Just id ->
+                    column [ spacing 20 ]
+                        [ el [] <| text "-----  DANGER ZONE -----"
+                        , case model.bekraftaRadering of
+                            Nothing ->
+                                knapp "Radera" (Radera id)
 
-                      else
-                        knapp "Radera" Radera
-                    ]
+                            Just bekraftatId ->
+                                knapp "Bekräfta radering" (RaderaBekraftad bekraftatId)
+                        ]
 
-              else
-                Element.none
+                Nothing ->
+                    Element.none
             ]
 
 

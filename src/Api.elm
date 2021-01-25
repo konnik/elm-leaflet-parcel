@@ -1,5 +1,6 @@
-module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, uppdateraVattendrag)
+module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
 
+import Api.Common exposing (..)
 import Auth exposing (Session)
 import Http
 import Json.Decode as D
@@ -54,6 +55,14 @@ hamtaVattendrag toMsg =
         }
 
 
+raderaVattendrag : Session -> Int -> (Result Http.Error () -> msg) -> Cmd msg
+raderaVattendrag session id toMsg =
+    delete session
+        { url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt id
+        , expect = Http.expectWhatever toMsg
+        }
+
+
 nyttVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
 nyttVattendrag session vattendrag toMsg =
     let
@@ -76,14 +85,10 @@ nyttVattendrag session vattendrag toMsg =
                 , ( "lan", lanJson )
                 ]
     in
-    Http.request
-        { method = "POST"
-        , url = "https://forsguiden-api.herokuapp.com/vattendrag"
-        , headers = OAuth.useToken session.token []
+    post session
+        { url = "https://forsguiden-api.herokuapp.com/vattendrag"
         , expect = Http.expectJson toMsg vattendragDecoder
         , body = Http.jsonBody body
-        , timeout = Nothing
-        , tracker = Nothing
         }
 
 
@@ -109,14 +114,10 @@ uppdateraVattendrag session vattendrag toMsg =
                 , ( "lan", lanJson )
                 ]
     in
-    Http.request
-        { method = "PUT"
-        , url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt vattendrag.id
-        , headers = OAuth.useToken session.token []
+    post session
+        { url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt vattendrag.id
         , expect = Http.expectJson toMsg vattendragDecoder
         , body = Http.jsonBody body
-        , timeout = Nothing
-        , tracker = Nothing
         }
 
 
