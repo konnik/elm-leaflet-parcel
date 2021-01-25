@@ -1,9 +1,10 @@
-module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag)
+module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, sparaVattendrag)
 
-import Auth exposing (hamtaAnvandare)
-import Fors exposing (beskrivning)
+import Auth exposing (Session)
 import Http
 import Json.Decode as D
+import Json.Encode as E
+import OAuth
 
 
 type alias Fors =
@@ -37,11 +38,48 @@ forsDecoder =
         (D.field "namn" D.string)
 
 
+
+-- vattendrag
+
+
 hamtaVattendrag : (Result Http.Error (List Vattendrag) -> msg) -> Cmd msg
 hamtaVattendrag toMsg =
     Http.get
         { url = "https://forsguiden-api.herokuapp.com/vattendrag"
         , expect = Http.expectJson toMsg (D.field "vattendrag" (D.list vattendragDecoder))
+        }
+
+
+sparaVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
+sparaVattendrag session vattendrag toMsg =
+    let
+        lanJson : E.Value
+        lanJson =
+            vattendrag.lan
+                |> E.list
+                    (\x ->
+                        E.object
+                            [ ( "id", E.int x.id )
+                            , ( "namn", E.string x.namn )
+                            ]
+                    )
+
+        body =
+            E.object <|
+                [ ( "id", E.int vattendrag.id )
+                , ( "namn", E.string vattendrag.namn )
+                , ( "beskrivning", E.string vattendrag.beskrivning )
+                , ( "lan", lanJson )
+                ]
+    in
+    Http.request
+        { method = "POST"
+        , url = "https://forsguiden-api.herokuapp.com/vattendrag"
+        , headers = OAuth.useToken session.token []
+        , expect = Http.expectJson toMsg vattendragDecoder
+        , body = Http.jsonBody body
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 

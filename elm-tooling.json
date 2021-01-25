@@ -1,0 +1,6 @@
+{
+    "entrypoints": [
+        "./src/Main.elm",
+        "./src/Admin.elm"
+    ]
+}

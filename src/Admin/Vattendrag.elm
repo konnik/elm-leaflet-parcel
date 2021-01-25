@@ -1,12 +1,13 @@
 module Admin.Vattendrag exposing (Model, Msg, init, redigera, update, view)
 
-import Api exposing (Vattendrag)
+import Api exposing (Lan, Vattendrag)
 import Auth exposing (Session)
-import Browser
 import Element exposing (Element, alignRight, column, el, padding, px, rgb255, row, spacing, text, width)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Fors exposing (beskrivning)
+import Http
 
 
 type alias Model =
@@ -22,6 +23,7 @@ type Msg
     | InputBeskr String
     | InputLan String
     | Spara
+    | SparaResult (Result Http.Error Vattendrag)
 
 
 init : Session -> ( Model, Cmd Msg )
@@ -44,6 +46,12 @@ update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
         Spara ->
+            ( model, validera model |> Result.map (sparaVattendrag session) |> Result.withDefault Cmd.none )
+
+        SparaResult (Ok vattendrag) ->
+            redigera session vattendrag
+
+        SparaResult (Err err) ->
             ( model, Cmd.none )
 
         InputNamn str ->
@@ -54,6 +62,29 @@ update session msg model =
 
         InputLan str ->
             ( { model | lan = str }, Cmd.none )
+
+
+validera : Model -> Result String Vattendrag
+validera model =
+    let
+        lan =
+            model.lan
+                |> String.split ","
+                |> List.map String.trim
+                |> List.filterMap String.toInt
+                |> List.map (\id -> Lan id "")
+    in
+    Ok
+        { id = model.id
+        , namn = model.namn
+        , beskrivning = model.beskrivning
+        , lan = lan
+        }
+
+
+sparaVattendrag : Session -> Vattendrag -> Cmd Msg
+sparaVattendrag session vattendrag =
+    Api.sparaVattendrag session vattendrag SparaResult
 
 
 view : Model -> Element Msg
