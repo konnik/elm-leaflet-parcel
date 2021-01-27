@@ -289,7 +289,14 @@ vattendragView vattendrag =
     let
         link v =
             Element.Input.button []
-                { label = text v.namn
+                { label =
+                    text
+                        (if v.namn == "" then
+                            "<blank>"
+
+                         else
+                            v.namn
+                        )
                 , onPress = Just (RedigeraVattendrag v)
                 }
     in

@@ -2,12 +2,14 @@ module Admin.Vattendrag exposing (Model, Msg, init, nytt, redigera, update, view
 
 import Api exposing (Lan, Vattendrag)
 import Auth exposing (Session)
-import Element exposing (Attribute, Element, alignRight, centerX, column, el, fill, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Http
+import Process
+import Task
 
 
 type alias Model =
@@ -26,9 +28,15 @@ type Status
     | Raderad
 
 
-type Meddelande
-    = Info String
-    | Fel String
+type alias Meddelande =
+    { typ : MeddelandeTyp
+    , text : String
+    }
+
+
+type MeddelandeTyp
+    = Info
+    | Fel
 
 
 type alias Form =
@@ -48,6 +56,7 @@ type Msg
     | RaderaBekraftad
     | RaderaAvbruten
     | RaderaResult (Result Http.Error ())
+    | UppdateraModel Model
 
 
 init : Session -> ( Model, Cmd Msg )
@@ -103,15 +112,15 @@ update session msg model =
             ( { model | status = Inmatning }, Cmd.none )
 
         RaderaResult (Ok ()) ->
-            ( { model | id = Nothing, status = Raderad, meddelande = Just <| Info "Vattendraget har raderats." }, Cmd.none )
+            ( model, fordrojUppdatering 1000 { model | id = Nothing, status = Raderad, meddelande = Just <| info "Vattendraget har raderats." } )
 
         RaderaResult (Err err) ->
-            ( { model | status = Inmatning, meddelande = Just <| Fel "Det gick inte att radera vattendraget." }, Cmd.none )
+            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att radera vattendraget." } )
 
         Spara ->
             case validera model.id model.form of
                 Ok vattendrag ->
-                    ( { model | status = Sparar }
+                    ( { model | status = Sparar, meddelande = Nothing }
                     , if vattendrag.id == -1 then
                         Api.nyttVattendrag session vattendrag SparaResult
 
@@ -119,15 +128,15 @@ update session msg model =
                         Api.uppdateraVattendrag session vattendrag SparaResult
                     )
 
-                Err felmeddelande ->
-                    ( { model | status = Inmatning, meddelande = Just <| Fel felmeddelande }, Cmd.none )
+                Err valideringsFel ->
+                    ( { model | status = Inmatning, meddelande = Just <| fel valideringsFel }, Cmd.none )
 
         SparaResult (Ok vattendrag) ->
             --redigera session vattendrag
-            ( { model | id = Just vattendrag.id, status = Inmatning, meddelande = Just <| Info "Vattendraget har sparats." }, Cmd.none )
+            ( model, fordrojUppdatering 1000 { model | id = Just vattendrag.id, status = Inmatning, meddelande = Just <| info "Vattendraget har sparats." } )
 
         SparaResult (Err err) ->
-            ( { model | status = Inmatning, meddelande = Just <| Fel "Det gick inte att spara vattendraget." }, Cmd.none )
+            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att spara vattendraget." } )
 
         -- form input
         InputNamn str ->
@@ -151,6 +160,29 @@ update session msg model =
             in
             ( { model | form = { f | lan = str } }, Cmd.none )
 
+        UppdateraModel newModel ->
+            ( newModel, Cmd.none )
+
+
+fordrojUppdatering : Float -> Model -> Cmd Msg
+fordrojUppdatering millis model =
+    let
+        task =
+            Process.sleep millis
+                |> Task.map (\_ -> model)
+    in
+    Task.perform UppdateraModel task
+
+
+info : String -> Meddelande
+info text =
+    { text = text, typ = Info }
+
+
+fel : String -> Meddelande
+fel text =
+    { text = text, typ = Fel }
+
 
 validera : Maybe Int -> Form -> Result String Vattendrag
 validera maybeId form =
@@ -172,27 +204,34 @@ validera maybeId form =
 
 view : Model -> Element Msg
 view model =
-    column [ spacing 20, width fill ]
-        [ model.meddelande |> Maybe.map meddelandeView |> Maybe.withDefault Element.none
-        , if model.status /= Raderad then
+    column [ spacing 20, centerX, centerY, width (fill |> maximum 600) ]
+        [ if model.status /= Raderad then
             redigeraView model
 
           else
-            Element.none
+            el [ Font.color (rgb255 0 100 0) ] <| text "Vattendraget har raderats."
         ]
 
 
 redigeraView : Model -> Element Msg
 redigeraView model =
-    column [ spacing 20 ]
+    let
+        omId : Element Msg -> Element Msg
+        omId elem =
+            if model.id /= Nothing then
+                elem
+
+            else
+                Element.none
+    in
+    column [ spacing 20, width fill ]
         [ rubrikView model.id
         , formView model.form
-        , knappSpara model.status
-        , if model.id /= Nothing then
-            viewRadera model.status
-
-          else
-            Element.none
+        , row [ spacing 20, width fill ]
+            [ viewRadera model.status |> omId
+            , knappSpara model.status
+            ]
+        , model.meddelande |> Maybe.map meddelandeView |> Maybe.withDefault Element.none
         ]
 
 
@@ -201,14 +240,14 @@ meddelandeView meddelande =
     let
         msgBox : List (Attribute msg) -> String -> Element msg
         msgBox attrs msg =
-            el (attrs ++ [ width fill, padding 20, Border.width 2, Border.rounded 10 ]) <| text msg
+            el (attrs ++ [ alignRight ]) <| text msg
     in
-    case meddelande of
-        Info msg ->
-            msgBox [ Bg.color (rgb255 200 255 200) ] msg
+    case meddelande.typ of
+        Info ->
+            msgBox [ Font.color (rgb255 0 100 0) ] meddelande.text
 
-        Fel msg ->
-            msgBox [ Bg.color (rgb255 255 200 200) ] msg
+        Fel ->
+            msgBox [ Font.color (rgb255 200 0 0) ] meddelande.text
 
 
 rubrikView : Maybe Int -> Element Msg
@@ -222,7 +261,7 @@ rubrikView maybeId =
 
 formView : Form -> Element Msg
 formView form =
-    column [ spacing 20 ]
+    column [ spacing 20, width fill ]
         [ input "Namn" form.namn InputNamn
         , input "Län" form.lan InputLan
         , textbox "Beskrivning" form.beskrivning InputBeskr
@@ -234,33 +273,39 @@ viewRadera status =
     case status of
         BekraftaRadera ->
             row [ spacing 20, alignRight ]
-                [ knapp "Bekräfta radera" (Just RaderaBekraftad)
-                , knapp "Avbryt" (Just RaderaAvbruten)
+                [ knapp { label = "Bekräfta radera", state = Aktiv } RaderaBekraftad
+                , knapp { label = "Avbryt", state = Aktiv } RaderaAvbruten
                 ]
 
         Raderar ->
-            el [ alignRight ] <| knapp "Raderar..." Nothing
+            row [ spacing 20, alignRight ]
+                [ knapp { label = "Raderar...", state = Spinning } RaderaAvbruten
+                , knapp { label = "Avbryt", state = Inaktiverad } RaderaAvbruten
+                ]
+
+        Inmatning ->
+            el [ alignRight ] <| knapp { label = "Radera", state = Aktiv } Radera
 
         _ ->
-            el [ alignRight ] <| knapp "Radera" (Just Radera)
+            el [ alignRight ] <| knapp { label = "Radera", state = Inaktiverad } Radera
 
 
 knappSpara : Status -> Element Msg
 knappSpara status =
     case status of
         Inmatning ->
-            knapp "Spara" (Just Spara)
+            knapp { label = "Spara", state = Aktiv } Spara
 
         Sparar ->
-            knapp "Sparar..." Nothing
+            knapp { label = "Sparar...", state = Spinning } Spara
 
         _ ->
-            knapp "Spara" Nothing
+            knapp { label = "Spara", state = Inaktiverad } Spara
 
 
 input : String -> String -> (String -> msg) -> Element msg
 input label value toMsg =
-    Input.text [ width (px 600) ]
+    Input.text [ width fill ]
         { label = Input.labelAbove [] (text label)
         , placeholder = Nothing
         , onChange = toMsg
@@ -270,7 +315,7 @@ input label value toMsg =
 
 textbox : String -> String -> (String -> msg) -> Element msg
 textbox label value toMsg =
-    Input.multiline [ width (px 600) ]
+    Input.multiline [ width fill ]
         { onChange = toMsg
         , text = value
         , placeholder = Nothing
@@ -279,9 +324,36 @@ textbox label value toMsg =
         }
 
 
-knapp : String -> Maybe msg -> Element msg
-knapp label maybeToMsg =
-    Input.button [ Border.width 1, padding 10, alignRight ]
-        { onPress = maybeToMsg
-        , label = text label
+type KnappState
+    = Aktiv
+    | Inaktiverad
+    | Spinning
+
+
+knapp : { label : String, state : KnappState } -> msg -> Element msg
+knapp { label, state } toMsg =
+    Input.button
+        [ Font.center
+        , Border.width 1
+        , paddingEach { left = 10, right = 10, top = 0, bottom = 0 }
+        , alignRight
+        , width (shrink |> minimum 100)
+        , height (px 40)
+        ]
+        { onPress =
+            if state == Aktiv then
+                Just toMsg
+
+            else
+                Nothing
+        , label =
+            case state of
+                Spinning ->
+                    Element.image [ centerX, centerY, width (px 30) ] { src = "/spinner.svg", description = label }
+
+                Aktiv ->
+                    el [ centerX, centerY ] <| text label
+
+                Inaktiverad ->
+                    el [ centerX, centerY, Font.color (rgb255 200 200 200) ] <| text label
         }
