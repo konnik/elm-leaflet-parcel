@@ -1,6 +1,6 @@
 module Admin.Vattendrag exposing (Model, Msg, init, nytt, redigera, update, view)
 
-import Api exposing (Lan, Vattendrag)
+import Api exposing (Lan, Resurs(..), Vattendrag)
 import Auth exposing (Session)
 import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
@@ -51,7 +51,7 @@ type Msg
     | InputBeskr String
     | InputLan String
     | Spara
-    | SparaResult (Result Http.Error Vattendrag)
+    | SparaResult (Result Http.Error (Resurs Vattendrag))
     | Radera
     | RaderaBekraftad
     | RaderaAvbruten
@@ -79,9 +79,9 @@ nytt session =
     )
 
 
-redigera : Session -> Vattendrag -> ( Model, Cmd Msg )
-redigera session vattendrag =
-    ( { id = Just vattendrag.id
+redigera : Session -> Resurs Vattendrag -> ( Model, Cmd Msg )
+redigera session (Resurs id vattendrag) =
+    ( { id = Just id
       , form =
             { namn = vattendrag.namn
             , beskrivning = vattendrag.beskrivning
@@ -118,22 +118,23 @@ update session msg model =
             ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att radera vattendraget." } )
 
         Spara ->
-            case validera model.id model.form of
+            case validera model.form of
                 Ok vattendrag ->
                     ( { model | status = Sparar, meddelande = Nothing }
-                    , if vattendrag.id == -1 then
-                        Api.nyttVattendrag session vattendrag SparaResult
+                    , case model.id of
+                        Nothing ->
+                            Api.nyttVattendrag session vattendrag SparaResult
 
-                      else
-                        Api.uppdateraVattendrag session vattendrag SparaResult
+                        Just id ->
+                            Api.uppdateraVattendrag session (Resurs id vattendrag) SparaResult
                     )
 
                 Err valideringsFel ->
                     ( { model | status = Inmatning, meddelande = Just <| fel valideringsFel }, Cmd.none )
 
-        SparaResult (Ok vattendrag) ->
+        SparaResult (Ok (Resurs id vattendrag)) ->
             --redigera session vattendrag
-            ( model, fordrojUppdatering 1000 { model | id = Just vattendrag.id, status = Inmatning, meddelande = Just <| info "Vattendraget har sparats." } )
+            ( model, fordrojUppdatering 1000 { model | id = Just id, status = Inmatning, meddelande = Just <| info "Vattendraget har sparats." } )
 
         SparaResult (Err err) ->
             ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att spara vattendraget." } )
@@ -184,8 +185,8 @@ fel text =
     { text = text, typ = Fel }
 
 
-validera : Maybe Int -> Form -> Result String Vattendrag
-validera maybeId form =
+validera : Form -> Result String Vattendrag
+validera form =
     let
         lan =
             form.lan
@@ -195,8 +196,7 @@ validera maybeId form =
                 |> List.map (\id_ -> Lan id_ "")
     in
     Ok
-        { id = maybeId |> Maybe.withDefault -1
-        , namn = form.namn
+        { namn = form.namn
         , beskrivning = form.beskrivning
         , lan = lan
         }

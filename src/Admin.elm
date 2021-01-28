@@ -1,20 +1,18 @@
-module Admin exposing (Model, Msg, init, subscriptions, update)
+module Admin exposing (Model, Msg, init, main, subscriptions, update)
 
 import Admin.Route as Route exposing (Route)
 import Admin.Vattendrag as VattendragPage
-import Api exposing (Fors, Lan, Vattendrag)
+import Api exposing (Fors, Lan, Resurs(..), Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
 import Element exposing (Element, alignRight, column, el, fill, height, padding, px, row, spacing, text, width)
 import Element.Font as Font
 import Element.Input
-import Html exposing (Html)
 import Http
-import Json.Decode as D
 import OAuth
 import OAuth.Implicit as Implicit
-import Url exposing (Url)
+import Url
 
 
 main : Program () AuthState Msg
@@ -39,25 +37,20 @@ type alias Model =
     { key : Nav.Key
     , url : Url.Url
     , session : Auth.Session
-    , forsar : List Fors
-    , vattendrag : List Vattendrag
+    , forsar : List (Resurs Fors)
+    , vattendrag : List (Resurs Vattendrag)
     , lan : List Lan
     , vattendragModel : VattendragPage.Model
     , route : Route
     }
 
 
-type alias Pages =
-    { vattendrag : VattendragPage.Model
-    }
-
-
 type Msg
-    = GotForsar (Result Http.Error (List Fors))
-    | GotVattendrag (Result Http.Error (List Vattendrag))
+    = GotForsar (Result Http.Error (List (Resurs Fors)))
+    | GotVattendrag (Result Http.Error (List (Resurs Vattendrag)))
     | GotLan (Result Http.Error (List Lan))
     | GotUser (Result Http.Error UserInfo)
-    | RedigeraVattendrag Vattendrag
+    | RedigeraVattendrag (Resurs Vattendrag)
     | NyttVattendrag
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
@@ -69,7 +62,7 @@ type Msg
 
 
 init : () -> Url.Url -> Nav.Key -> ( AuthState, Cmd Msg )
-init flags url key =
+init _ url key =
     case Implicit.parseToken url of
         Implicit.Empty ->
             ( LoggarIn, Auth.loggaIn url )
@@ -168,19 +161,19 @@ update msg model =
         GotForsar (Ok forsar) ->
             ( { model | forsar = forsar }, Cmd.none )
 
-        GotForsar (Err err) ->
+        GotForsar (Err _) ->
             ( model, Cmd.none )
 
         GotVattendrag (Ok vattendrag) ->
             ( { model | vattendrag = vattendrag }, Cmd.none )
 
-        GotVattendrag (Err err) ->
+        GotVattendrag (Err _) ->
             ( model, Cmd.none )
 
         GotLan (Ok lan) ->
             ( { model | lan = lan }, Cmd.none )
 
-        GotLan (Err err) ->
+        GotLan (Err _) ->
             ( model, Cmd.none )
 
         UrlRequested urlRequest ->
@@ -198,7 +191,7 @@ update msg model =
 
 
 subscriptions : AuthState -> Sub Msg
-subscriptions authState =
+subscriptions _ =
     Sub.none
 
 
@@ -274,20 +267,21 @@ sektionView rubrik antal newMsg innehall =
         ]
 
 
-forsarView : List Fors -> Element msg
+forsarView : List (Resurs Fors) -> Element msg
 forsarView forsar =
     forsar
-        |> List.map .namn
+        |> List.map (\(Resurs id fors) -> fors.namn ++ "(" ++ String.fromInt id ++ ")")
         |> String.join ", "
         |> text
         |> List.singleton
         |> Element.paragraph []
 
 
-vattendragView : List Vattendrag -> Element Msg
+vattendragView : List (Resurs Vattendrag) -> Element Msg
 vattendragView vattendrag =
     let
-        link v =
+        link : Resurs Vattendrag -> Element Msg
+        link ((Resurs id v) as res) =
             Element.Input.button []
                 { label =
                     text
@@ -295,9 +289,9 @@ vattendragView vattendrag =
                             "<blank>"
 
                          else
-                            v.namn
+                            v.namn ++ "(" ++ String.fromInt id ++ ")"
                         )
-                , onPress = Just (RedigeraVattendrag v)
+                , onPress = Just (RedigeraVattendrag res)
                 }
     in
     vattendrag

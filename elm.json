@@ -13,6 +13,7 @@
             "elm/json": "1.1.3",
             "elm/url": "1.0.0",
             "mdgriffith/elm-ui": "1.1.8",
+            "stoeffel/elm-verify": "5.0.0",
             "truqu/elm-oauth2": "7.0.1"
         },
         "indirect": {

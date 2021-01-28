@@ -1,20 +1,22 @@
-module Api exposing (Fors, Lan, Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
+module Api exposing (Fors, Lan, Resurs(..), Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
 
 import Api.Common exposing (..)
 import Auth exposing (Session)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import OAuth
+
+
+type Resurs a
+    = Resurs Int a
 
 
 type alias Fors =
-    { id : Int, namn : String }
+    { namn : String, langd : Int, fallhojd : Int }
 
 
 type alias Vattendrag =
-    { id : Int
-    , namn : String
+    { namn : String
     , beskrivning : String
     , lan : List Lan
     }
@@ -28,30 +30,31 @@ type alias Lan =
 -- forsar
 
 
-hamtaForsar : (Result Http.Error (List Fors) -> msg) -> Cmd msg
+hamtaForsar : (Result Http.Error (List (Resurs Fors)) -> msg) -> Cmd msg
 hamtaForsar toMsg =
     Http.get
         { url = "https://forsguiden-api.herokuapp.com/forsstracka"
-        , expect = Http.expectJson toMsg (D.field "forsstracka" (D.list forsDecoder))
+        , expect = Http.expectJson toMsg (D.field "forsstracka" (D.list (resurs forsDecoder)))
         }
 
 
 forsDecoder : D.Decoder Fors
 forsDecoder =
-    D.map2 Fors
-        (D.field "id" D.int)
+    D.map3 Fors
         (D.field "namn" D.string)
+        (D.field "langd" D.int)
+        (D.field "fallhojd" D.int)
 
 
 
 -- vattendrag
 
 
-hamtaVattendrag : (Result Http.Error (List Vattendrag) -> msg) -> Cmd msg
+hamtaVattendrag : (Result Http.Error (List (Resurs Vattendrag)) -> msg) -> Cmd msg
 hamtaVattendrag toMsg =
     Http.get
         { url = "https://forsguiden-api.herokuapp.com/vattendrag"
-        , expect = Http.expectJson toMsg (D.field "vattendrag" (D.list vattendragDecoder))
+        , expect = Http.expectJson toMsg (D.field "vattendrag" (D.list (resurs vattendragDecoder)))
         }
 
 
@@ -63,7 +66,7 @@ raderaVattendrag session id toMsg =
         }
 
 
-nyttVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
+nyttVattendrag : Session -> Vattendrag -> (Result Http.Error (Resurs Vattendrag) -> msg) -> Cmd msg
 nyttVattendrag session vattendrag toMsg =
     let
         lanJson : E.Value
@@ -79,7 +82,7 @@ nyttVattendrag session vattendrag toMsg =
 
         body =
             E.object <|
-                [ ( "id", E.int vattendrag.id )
+                [ ( "id", E.int -1 )
                 , ( "namn", E.string vattendrag.namn )
                 , ( "beskrivning", E.string vattendrag.beskrivning )
                 , ( "lan", lanJson )
@@ -87,13 +90,17 @@ nyttVattendrag session vattendrag toMsg =
     in
     post session
         { url = "https://forsguiden-api.herokuapp.com/vattendrag"
-        , expect = Http.expectJson toMsg vattendragDecoder
+        , expect = Http.expectJson toMsg (resurs vattendragDecoder)
         , body = Http.jsonBody body
         }
 
 
-uppdateraVattendrag : Session -> Vattendrag -> (Result Http.Error Vattendrag -> msg) -> Cmd msg
-uppdateraVattendrag session vattendrag toMsg =
+uppdateraVattendrag :
+    Session
+    -> Resurs Vattendrag
+    -> (Result Http.Error (Resurs Vattendrag) -> msg)
+    -> Cmd msg
+uppdateraVattendrag session (Resurs id vattendrag) toMsg =
     let
         lanJson : E.Value
         lanJson =
@@ -108,23 +115,29 @@ uppdateraVattendrag session vattendrag toMsg =
 
         body =
             E.object <|
-                [ ( "id", E.int vattendrag.id )
+                [ ( "id", E.int id )
                 , ( "namn", E.string vattendrag.namn )
                 , ( "beskrivning", E.string vattendrag.beskrivning )
                 , ( "lan", lanJson )
                 ]
     in
     put session
-        { url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt vattendrag.id
-        , expect = Http.expectJson toMsg vattendragDecoder
+        { url = "https://forsguiden-api.herokuapp.com/vattendrag/" ++ String.fromInt id
+        , expect = Http.expectJson toMsg (resurs vattendragDecoder)
         , body = Http.jsonBody body
         }
 
 
+resurs : D.Decoder a -> D.Decoder (Resurs a)
+resurs decoder =
+    D.map2 Resurs
+        (D.field "id" D.int)
+        decoder
+
+
 vattendragDecoder : D.Decoder Vattendrag
 vattendragDecoder =
-    D.map4 Vattendrag
-        (D.field "id" D.int)
+    D.map3 Vattendrag
         (D.field "namn" D.string)
         (D.field "beskrivning" D.string)
         (D.field "lan" (D.list lanDecoder))
