@@ -326,7 +326,7 @@ vattendragView vattendrag =
 lanView : List Lan -> Element msg
 lanView lan =
     lan
-        |> List.map .namn
+        |> List.map (\l -> l.namn ++ "(" ++ String.fromInt l.id ++ ")")
         |> String.join ", "
         |> text
         |> List.singleton
