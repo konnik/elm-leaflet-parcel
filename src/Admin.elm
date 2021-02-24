@@ -1,6 +1,6 @@
 module Admin exposing (Model, Msg, init, main, subscriptions, update)
 
-import Admin.Route as Route exposing (Route)
+import Admin.Route as Route exposing (Route(..))
 import Admin.Vattendrag as VattendragPage
 import Api exposing (Fors, Lan, Resurs(..), Vattendrag)
 import Auth exposing (UserInfo)
@@ -55,6 +55,7 @@ type Msg
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | VattendragMsg VattendragPage.Msg
+    | NavigeraTillDashboard
 
 
 
@@ -120,6 +121,10 @@ authUpdate msg authState =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NavigeraTillDashboard ->
+            ( { model | route = Dashboard }, Cmd.none )
+                |> refreshDashboard
+
         RedigeraVattendrag vattendrag ->
             VattendragPage.redigera model.session vattendrag
                 |> Tuple.mapFirst
@@ -190,6 +195,22 @@ update msg model =
             )
 
 
+refreshDashboard : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+refreshDashboard ( model, cmd ) =
+    ( { model
+        | lan = []
+        , forsar = []
+        , vattendrag = []
+      }
+    , Cmd.batch
+        [ cmd
+        , Api.hamtaForsar GotForsar
+        , Api.hamtaVattendrag GotVattendrag
+        , Api.hamtaLan GotLan
+        ]
+    )
+
+
 subscriptions : AuthState -> Sub Msg
 subscriptions _ =
     Sub.none
@@ -237,17 +258,19 @@ headerView model =
             Element.none
 
         Just { namn, bild } ->
-            row [ alignRight, spacing 20 ]
-                [ text <| namn
-                , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
+            row [ width fill ]
+                [ Element.Input.button [] { label = el [ Font.size 30 ] (text "Dashboard"), onPress = Just NavigeraTillDashboard }
+                , row [ alignRight, spacing 20 ]
+                    [ text <| namn
+                    , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
+                    ]
                 ]
 
 
 dashboardView : Model -> Element Msg
 dashboardView model =
     column [ spacing 30 ]
-        [ el [ Font.size 40 ] (text "Forsguiden admin")
-        , sektionView "Forsar" (List.length model.forsar) Nothing <|
+        [ sektionView "Forsar" (List.length model.forsar) Nothing <|
             forsarView model.forsar
         , sektionView "Vattendrag" (List.length model.vattendrag) (Just NyttVattendrag) <|
             vattendragView model.vattendrag
@@ -286,7 +309,7 @@ vattendragView vattendrag =
                 { label =
                     text
                         (if v.namn == "" then
-                            "<blank>"
+                            "<blank>" ++ "(" ++ String.fromInt id ++ ")"
 
                          else
                             v.namn ++ "(" ++ String.fromInt id ++ ")"
