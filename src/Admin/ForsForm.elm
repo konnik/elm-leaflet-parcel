@@ -1,6 +1,6 @@
-module Admin.Vattendrag exposing (Model, Msg, init, nytt, redigera, update, view)
+module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, view)
 
-import Api exposing (Lan, Resurs(..), Vattendrag)
+import Api exposing (Fors, Resurs(..), Vattendrag)
 import Auth exposing (Session)
 import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
@@ -41,17 +41,35 @@ type MeddelandeTyp
 
 type alias Form =
     { namn : String
-    , beskrivning : String
+    , langd : String
+    , fallhojd : String
+    , klass : String
+    , lyft : String
+    , koordinater : String
+    , smhipunkt : String
+    , minimum : String
+    , optimal : String
+    , maximum : String
     , lan : String
+    , vattendrag : String
     }
 
 
 type Msg
     = InputNamn String
-    | InputBeskr String
+    | InputLangd String
+    | InputFallhojd String
+    | InputKlass String
+    | InputLyft String
+    | InputKoordinater String
+    | InputSmhipunkt String
+    | InputMinimum String
+    | InputOptimal String
+    | InputMaximum String
+    | InputVattendrag String
     | InputLan String
     | Spara
-    | SparaResult (Result Http.Error (Resurs Vattendrag))
+    | SparaResult (Result Http.Error (Resurs Fors))
     | Radera
     | RaderaBekraftad
     | RaderaAvbruten
@@ -64,14 +82,27 @@ init =
     nytt
 
 
+emptyForm : Form
+emptyForm =
+    { namn = ""
+    , langd = ""
+    , klass = ""
+    , lyft = ""
+    , fallhojd = ""
+    , koordinater = ""
+    , smhipunkt = ""
+    , minimum = ""
+    , optimal = ""
+    , maximum = ""
+    , lan = ""
+    , vattendrag = ""
+    }
+
+
 nytt : Session -> ( Model, Cmd Msg )
 nytt session =
     ( { id = Nothing
-      , form =
-            { namn = ""
-            , beskrivning = ""
-            , lan = ""
-            }
+      , form = emptyForm
       , status = Inmatning
       , meddelande = Nothing
       }
@@ -79,13 +110,23 @@ nytt session =
     )
 
 
-redigera : Session -> Resurs Vattendrag -> ( Model, Cmd Msg )
-redigera session (Resurs id vattendrag) =
+redigera : Session -> Resurs Fors -> ( Model, Cmd Msg )
+redigera session (Resurs id fors) =
     ( { id = Just id
       , form =
-            { namn = vattendrag.namn
-            , beskrivning = vattendrag.beskrivning
-            , lan = vattendrag.lan |> List.map (.id >> String.fromInt) |> String.join ", "
+            { emptyForm
+                | namn = fors.namn
+                , langd = fors.langd |> String.fromInt
+                , fallhojd = fors.fallhojd |> String.fromInt
+                , klass = Api.gradToString fors.gradering.klass
+                , lyft = fors.gradering.lyft |> List.map Api.gradToString |> String.join ", "
+                , koordinater = [ fors.koordinater.lat, fors.koordinater.long ] |> List.map String.fromFloat |> String.join ", "
+                , smhipunkt = fors.flode.smhipunkt |> String.fromInt
+                , maximum = fors.flode.maximum |> String.fromInt
+                , minimum = fors.flode.minimum |> String.fromInt
+                , optimal = fors.flode.optimal |> String.fromInt
+                , vattendrag = fors.vattendrag |> List.map (.id >> String.fromInt) |> String.join ", "
+                , lan = fors.lan |> List.map (.id >> String.fromInt) |> String.join ", "
             }
       , status = Inmatning
       , meddelande = Nothing
@@ -103,7 +144,7 @@ update session msg model =
         RaderaBekraftad ->
             case model.id of
                 Just id ->
-                    ( { model | status = Raderar }, Api.raderaVattendrag session id RaderaResult )
+                    ( { model | status = Raderar }, Api.raderaFors session id RaderaResult )
 
                 _ ->
                     ( model, Cmd.none )
@@ -112,57 +153,76 @@ update session msg model =
             ( { model | status = Inmatning }, Cmd.none )
 
         RaderaResult (Ok ()) ->
-            ( model, fordrojUppdatering 1000 { model | id = Nothing, status = Raderad, meddelande = Just <| info "Vattendraget har raderats." } )
+            ( model, fordrojUppdatering 1000 { model | id = Nothing, status = Raderad, meddelande = Just <| info "Forsen har raderats." } )
 
         RaderaResult (Err err) ->
-            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att radera vattendraget." } )
+            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att radera forsen." } )
 
         Spara ->
             case validera model.form of
-                Ok vattendrag ->
+                Ok fors ->
                     ( { model | status = Sparar, meddelande = Nothing }
                     , case model.id of
                         Nothing ->
-                            Api.nyttVattendrag session vattendrag SparaResult
+                            Api.nyFors session fors SparaResult
 
                         Just id ->
-                            Api.uppdateraVattendrag session (Resurs id vattendrag) SparaResult
+                            Api.uppdateraFors session (Resurs id fors) SparaResult
                     )
 
                 Err valideringsFel ->
                     ( { model | status = Inmatning, meddelande = Just <| fel valideringsFel }, Cmd.none )
 
-        SparaResult (Ok (Resurs id vattendrag)) ->
-            --redigera session vattendrag
-            ( model, fordrojUppdatering 1000 { model | id = Just id, status = Inmatning, meddelande = Just <| info "Vattendraget har sparats." } )
+        SparaResult (Ok (Resurs id fors)) ->
+            ( model, fordrojUppdatering 1000 { model | id = Just id, status = Inmatning, meddelande = Just <| info "Forsen har sparats." } )
 
         SparaResult (Err err) ->
-            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att spara vattendraget." } )
+            ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att spara forsen." } )
 
         -- form input
         InputNamn str ->
-            let
-                f =
-                    model.form
-            in
-            ( { model | form = { f | namn = str } }, Cmd.none )
+            model |> updateForm (\f -> { f | namn = str })
 
-        InputBeskr str ->
-            let
-                f =
-                    model.form
-            in
-            ( { model | form = { f | beskrivning = str } }, Cmd.none )
+        InputLangd str ->
+            model |> updateForm (\f -> { f | langd = str })
+
+        InputFallhojd str ->
+            model |> updateForm (\f -> { f | fallhojd = str })
+
+        InputKlass str ->
+            model |> updateForm (\f -> { f | klass = str })
+
+        InputLyft str ->
+            model |> updateForm (\f -> { f | lyft = str })
+
+        InputKoordinater str ->
+            model |> updateForm (\f -> { f | koordinater = str })
+
+        InputSmhipunkt str ->
+            model |> updateForm (\f -> { f | smhipunkt = str })
+
+        InputMinimum str ->
+            model |> updateForm (\f -> { f | minimum = str })
+
+        InputMaximum str ->
+            model |> updateForm (\f -> { f | maximum = str })
+
+        InputOptimal str ->
+            model |> updateForm (\f -> { f | optimal = str })
+
+        InputVattendrag str ->
+            model |> updateForm (\f -> { f | vattendrag = str })
 
         InputLan str ->
-            let
-                f =
-                    model.form
-            in
-            ( { model | form = { f | lan = str } }, Cmd.none )
+            model |> updateForm (\f -> { f | lan = str })
 
         UppdateraModel newModel ->
             ( newModel, Cmd.none )
+
+
+updateForm : (Form -> Form) -> Model -> ( Model, Cmd msg )
+updateForm updateFunc model =
+    ( { model | form = updateFunc model.form }, Cmd.none )
 
 
 fordrojUppdatering : Float -> Model -> Cmd Msg
@@ -185,21 +245,9 @@ fel text =
     { text = text, typ = Fel }
 
 
-validera : Form -> Result String Vattendrag
+validera : Form -> Result String Fors
 validera form =
-    let
-        lan =
-            form.lan
-                |> String.split ","
-                |> List.map String.trim
-                |> List.filterMap String.toInt
-                |> List.map (\id_ -> Lan id_ "")
-    in
-    Ok
-        { namn = form.namn
-        , beskrivning = form.beskrivning
-        , lan = lan
-        }
+    Err "not implemented"
 
 
 view : Model -> Element Msg
@@ -209,7 +257,7 @@ view model =
             redigeraView model
 
           else
-            el [ Font.color (rgb255 0 100 0) ] <| text "Vattendraget har raderats."
+            el [ Font.color (rgb255 0 100 0) ] <| text "Forsen har raderats."
         ]
 
 
@@ -254,7 +302,7 @@ rubrikView : Maybe Int -> Element Msg
 rubrikView maybeId =
     let
         rubrik =
-            "Vattendrag " ++ (maybeId |> Maybe.map (\id -> " (" ++ String.fromInt id ++ ")") |> Maybe.withDefault "( nytt )")
+            "Fors " ++ (maybeId |> Maybe.map (\id -> " (" ++ String.fromInt id ++ ")") |> Maybe.withDefault "( nytt )")
     in
     el [ Font.size 30 ] (text rubrik)
 
@@ -263,8 +311,22 @@ formView : Form -> Element Msg
 formView form =
     column [ spacing 20, width fill ]
         [ input "Namn" form.namn InputNamn
+        , row [ spacing 20 ]
+            [ input "Längd" form.langd InputLangd
+            , input "Fallhöjd" form.fallhojd InputFallhojd
+            ]
+        , row [ spacing 20 ]
+            [ input "Klass" form.klass InputKlass
+            , input "Lyft" form.lyft InputLyft
+            ]
+        , input "Smhipunkt" form.smhipunkt InputSmhipunkt
+        , row [ spacing 20 ]
+            [ input "Min" form.minimum InputMinimum
+            , input "Max" form.maximum InputMaximum
+            , input "Optimal" form.optimal InputOptimal
+            ]
+        , input "Vattendrag" form.vattendrag InputVattendrag
         , input "Län" form.lan InputLan
-        , textbox "Beskrivning" form.beskrivning InputBeskr
         ]
 
 

@@ -1,4 +1,4 @@
-module Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag, gradToString, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
+module Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag, gradToString, hamtaForsar, hamtaLan, hamtaVattendrag, nyFors, nyttVattendrag, raderaFors, raderaVattendrag, uppdateraFors, uppdateraVattendrag)
 
 import Api.Common exposing (..)
 import Auth exposing (Session)
@@ -74,6 +74,25 @@ hamtaForsar toMsg =
         { url = "https://forsguiden-api.herokuapp.com/forsstracka"
         , expect = Http.expectJson toMsg (D.field "forsstracka" (D.list (resurs forsDecoder)))
         }
+
+
+raderaFors : Session -> Int -> (Result Http.Error () -> msg) -> Cmd msg
+raderaFors session id toMsg =
+    Cmd.none
+
+
+nyFors : Session -> Fors -> (Result Http.Error (Resurs Fors) -> msg) -> Cmd msg
+nyFors session fors toMsg =
+    Cmd.none
+
+
+uppdateraFors :
+    Session
+    -> Resurs Fors
+    -> (Result Http.Error (Resurs Fors) -> msg)
+    -> Cmd msg
+uppdateraFors session (Resurs id fors) toMsg =
+    Cmd.none
 
 
 forsDecoder : D.Decoder Fors

@@ -1,7 +1,8 @@
 module Admin exposing (Model, Msg, init, main, subscriptions, update)
 
+import Admin.ForsForm as ForsPage
 import Admin.Route as Route exposing (Route(..))
-import Admin.Vattendrag as VattendragPage
+import Admin.VattendragForm as VattendragPage
 import Api exposing (Fors, Lan, Resurs(..), Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
@@ -41,6 +42,7 @@ type alias Model =
     , vattendrag : List (Resurs Vattendrag)
     , lan : List Lan
     , vattendragModel : VattendragPage.Model
+    , forsModel : ForsPage.Model
     , route : Route
     }
 
@@ -51,10 +53,12 @@ type Msg
     | GotLan (Result Http.Error (List Lan))
     | GotUser (Result Http.Error UserInfo)
     | RedigeraVattendrag (Resurs Vattendrag)
+    | RedigeraFors (Resurs Fors)
     | NyttVattendrag
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | VattendragMsg VattendragPage.Msg
+    | ForsFormMsg ForsPage.Msg
     | NavigeraTillDashboard
 
 
@@ -78,6 +82,9 @@ init _ url key =
 
                 ( vattendragModel, vattendragCmd ) =
                     VattendragPage.init session
+
+                ( forsModel, forsCmd ) =
+                    ForsPage.init session
             in
             ( Inloggad
                 { key = key
@@ -87,6 +94,7 @@ init _ url key =
                 , forsar = []
                 , vattendrag = []
                 , vattendragModel = vattendragModel
+                , forsModel = forsModel
                 , route = Route.Dashboard
                 }
             , Cmd.batch
@@ -96,6 +104,7 @@ init _ url key =
                 , Api.hamtaVattendrag GotVattendrag
                 , Api.hamtaLan GotLan
                 , Cmd.map VattendragMsg vattendragCmd
+                , Cmd.map ForsFormMsg forsCmd
                 ]
             )
 
@@ -125,6 +134,17 @@ update msg model =
             ( { model | route = Dashboard }, Cmd.none )
                 |> refreshDashboard
 
+        RedigeraFors fors ->
+            ForsPage.redigera model.session fors
+                |> Tuple.mapFirst
+                    (\m ->
+                        { model
+                            | forsModel = m
+                            , route = Route.RedigeraFors
+                        }
+                    )
+                |> Tuple.mapSecond (Cmd.map ForsFormMsg)
+
         RedigeraVattendrag vattendrag ->
             VattendragPage.redigera model.session vattendrag
                 |> Tuple.mapFirst
@@ -151,6 +171,11 @@ update msg model =
             VattendragPage.update model.session pageMsg model.vattendragModel
                 |> Tuple.mapFirst (\m -> { model | vattendragModel = m })
                 |> Tuple.mapSecond (Cmd.map VattendragMsg)
+
+        ForsFormMsg pageMsg ->
+            ForsPage.update model.session pageMsg model.forsModel
+                |> Tuple.mapFirst (\m -> { model | forsModel = m })
+                |> Tuple.mapSecond (Cmd.map ForsFormMsg)
 
         GotUser (Ok anvandare) ->
             ( { model
@@ -248,6 +273,9 @@ view model =
 
             Route.RedigeraVattendrag ->
                 VattendragPage.view model.vattendragModel |> Element.map VattendragMsg
+
+            Route.RedigeraFors ->
+                ForsPage.view model.forsModel |> Element.map ForsFormMsg
         ]
 
 
@@ -290,13 +318,26 @@ sektionView rubrik antal newMsg innehall =
         ]
 
 
-forsarView : List (Resurs Fors) -> Element msg
+forsarView : List (Resurs Fors) -> Element Msg
 forsarView forsar =
+    let
+        link : Resurs Fors -> Element Msg
+        link ((Resurs id v) as res) =
+            Element.Input.button []
+                { label =
+                    text
+                        (if v.namn == "" then
+                            "<blank>"
+
+                         else
+                            v.namn ++ "[" ++ Api.gradToString v.gradering.klass ++ "]"
+                        )
+                , onPress = Just (RedigeraFors res)
+                }
+    in
     forsar
-        |> List.map (\(Resurs id fors) -> fors.namn ++ "[" ++ Api.gradToString fors.gradering.klass ++ "]")
-        |> String.join ", "
-        |> text
-        |> List.singleton
+        |> List.map link
+        |> List.intersperse (text ", ")
         |> Element.paragraph []
 
 
