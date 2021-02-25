@@ -24,6 +24,12 @@ type alias Fors =
         { lat : Float
         , long : Float
         }
+    , flode :
+        { smhipunkt : Int
+        , minimum : Int
+        , optimal : Int
+        , maximum : Int
+        }
     }
 
 
@@ -67,12 +73,35 @@ hamtaForsar toMsg =
 
 forsDecoder : D.Decoder Fors
 forsDecoder =
-    D.map5 Fors
+    D.map6 Fors
         (D.field "namn" D.string)
         (D.field "langd" D.int)
         (D.field "fallhojd" D.int)
         (D.field "gradering" graderingDecoder)
         (D.field "koordinater" koordinaterDecoder)
+        (D.field "flode" flodeDecoder)
+
+
+flodeDecoder :
+    D.Decoder
+        { smhipunkt : Int
+        , minimum : Int
+        , optimal : Int
+        , maximum : Int
+        }
+flodeDecoder =
+    D.map4
+        (\smhipunkt minimum optimal maximum ->
+            { smhipunkt = smhipunkt
+            , minimum = minimum
+            , optimal = optimal
+            , maximum = maximum
+            }
+        )
+        (D.field "smhipunkt" D.int)
+        (D.field "minimum" D.int)
+        (D.field "optimal" D.int)
+        (D.field "maximum" D.int)
 
 
 koordinaterDecoder : D.Decoder { lat : Float, long : Float }
