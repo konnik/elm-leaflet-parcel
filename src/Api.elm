@@ -30,6 +30,12 @@ type alias Fors =
         , optimal : Int
         , maximum : Int
         }
+    , vattendrag :
+        List
+            { id : Int
+            , namn : String
+            }
+    , lan : List { id : Int, namn : String }
     }
 
 
@@ -73,13 +79,29 @@ hamtaForsar toMsg =
 
 forsDecoder : D.Decoder Fors
 forsDecoder =
-    D.map6 Fors
+    D.map8 Fors
         (D.field "namn" D.string)
         (D.field "langd" D.int)
         (D.field "fallhojd" D.int)
         (D.field "gradering" graderingDecoder)
         (D.field "koordinater" koordinaterDecoder)
         (D.field "flode" flodeDecoder)
+        (D.field "vattendrag" (D.list forsVattendragDecoder))
+        (D.field "lan" (D.list forsLanDecoder))
+
+
+forsLanDecoder : D.Decoder { id : Int, namn : String }
+forsLanDecoder =
+    D.map2 (\id namn -> { id = id, namn = namn })
+        (D.field "id" D.int)
+        (D.field "namn" D.string)
+
+
+forsVattendragDecoder : D.Decoder { id : Int, namn : String }
+forsVattendragDecoder =
+    D.map2 (\id namn -> { id = id, namn = namn })
+        (D.field "id" D.int)
+        (D.field "namn" D.string)
 
 
 flodeDecoder :
