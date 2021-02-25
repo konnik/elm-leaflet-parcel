@@ -287,7 +287,7 @@ headerView model =
 
         Just { namn, bild } ->
             row [ width fill ]
-                [ Element.Input.button [] { label = el [ Font.size 30 ] (text "Dashboard"), onPress = Just NavigeraTillDashboard }
+                [ Element.Input.button [] { label = el [ Font.size 30 ] (text "Admin"), onPress = Just NavigeraTillDashboard }
                 , row [ alignRight, spacing 20 ]
                     [ text <| namn
                     , Element.image [ width (px 50), height (px 50) ] { src = bild, description = "Profilbild" }
