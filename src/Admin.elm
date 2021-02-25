@@ -293,7 +293,7 @@ sektionView rubrik antal newMsg innehall =
 forsarView : List (Resurs Fors) -> Element msg
 forsarView forsar =
     forsar
-        |> List.map (\(Resurs id fors) -> fors.namn ++ "(" ++ String.fromInt id ++ ")")
+        |> List.map (\(Resurs id fors) -> fors.namn ++ "[" ++ Api.gradToString fors.gradering.klass ++ "]")
         |> String.join ", "
         |> text
         |> List.singleton
@@ -309,10 +309,10 @@ vattendragView vattendrag =
                 { label =
                     text
                         (if v.namn == "" then
-                            "<blank>" ++ "(" ++ String.fromInt id ++ ")"
+                            "<blank>"
 
                          else
-                            v.namn ++ "(" ++ String.fromInt id ++ ")"
+                            v.namn
                         )
                 , onPress = Just (RedigeraVattendrag res)
                 }

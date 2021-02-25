@@ -1,11 +1,10 @@
-module Api exposing (Fors, Lan, Resurs(..), Vattendrag, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
+module Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag, gradToString, hamtaForsar, hamtaLan, hamtaVattendrag, nyttVattendrag, raderaVattendrag, uppdateraVattendrag)
 
 import Api.Common exposing (..)
 import Auth exposing (Session)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import Maybe
 
 
 type Resurs a
@@ -150,7 +149,7 @@ gradDecoder =
     D.string
         |> D.andThen
             (\gradStr ->
-                case parseGrad gradStr of
+                case gradFromString gradStr of
                     Just grad ->
                         D.succeed grad
 
@@ -159,8 +158,42 @@ gradDecoder =
             )
 
 
-parseGrad : String -> Maybe Grad
-parseGrad grad =
+gradToString : Grad -> String
+gradToString grad =
+    let
+        extraStr extra =
+            case extra of
+                Plus ->
+                    "+"
+
+                Minus ->
+                    "-"
+
+                Inget ->
+                    ""
+    in
+    case grad of
+        Grad1 ->
+            "1"
+
+        Grad2 ->
+            "2"
+
+        Grad3 x ->
+            "3" ++ extraStr x
+
+        Grad4 x ->
+            "4" ++ extraStr x
+
+        Grad5 x ->
+            "5" ++ extraStr x
+
+        Grad6 ->
+            "6"
+
+
+gradFromString : String -> Maybe Grad
+gradFromString grad =
     case grad of
         "1" ->
             Just Grad1
