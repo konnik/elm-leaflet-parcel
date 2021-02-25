@@ -5,6 +5,7 @@ import Auth exposing (Session)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Maybe
 
 
 type Resurs a
@@ -12,7 +13,29 @@ type Resurs a
 
 
 type alias Fors =
-    { namn : String, langd : Int, fallhojd : Int }
+    { namn : String
+    , langd : Int
+    , fallhojd : Int
+    , gradering :
+        { klass : Grad
+        , lyft : List Grad
+        }
+    }
+
+
+type Grad
+    = Grad1
+    | Grad2
+    | Grad3 GradExtra
+    | Grad4 GradExtra
+    | Grad5 GradExtra
+    | Grad6
+
+
+type GradExtra
+    = Inget
+    | Plus
+    | Minus
 
 
 type alias Vattendrag =
@@ -40,10 +63,80 @@ hamtaForsar toMsg =
 
 forsDecoder : D.Decoder Fors
 forsDecoder =
-    D.map3 Fors
+    D.map4 Fors
         (D.field "namn" D.string)
         (D.field "langd" D.int)
         (D.field "fallhojd" D.int)
+        (D.field "gradering" graderingDecoder)
+
+
+graderingDecoder : D.Decoder { klass : Grad, lyft : List Grad }
+graderingDecoder =
+    D.map2
+        (\klass lyft ->
+            { klass = klass
+            , lyft = lyft
+            }
+        )
+        (D.field "klass" gradDecoder)
+        (D.field "lyft" (D.list gradDecoder))
+
+
+gradDecoder : D.Decoder Grad
+gradDecoder =
+    D.string
+        |> D.andThen
+            (\gradStr ->
+                case parseGrad gradStr of
+                    Just grad ->
+                        D.succeed grad
+
+                    Nothing ->
+                        D.fail <| "Ogiltig grad: '" ++ gradStr ++ "'"
+            )
+
+
+parseGrad : String -> Maybe Grad
+parseGrad grad =
+    case grad of
+        "1" ->
+            Just Grad1
+
+        "2" ->
+            Just Grad2
+
+        "3-" ->
+            Just <| Grad3 Minus
+
+        "3" ->
+            Just <| Grad3 Inget
+
+        "3+" ->
+            Just <| Grad3 Plus
+
+        "4-" ->
+            Just <| Grad4 Minus
+
+        "4" ->
+            Just <| Grad4 Inget
+
+        "4+" ->
+            Just <| Grad4 Plus
+
+        "5-" ->
+            Just <| Grad5 Minus
+
+        "5" ->
+            Just <| Grad5 Inget
+
+        "5+" ->
+            Just <| Grad5 Plus
+
+        "6" ->
+            Just <| Grad6
+
+        _ ->
+            Nothing
 
 
 
