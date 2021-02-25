@@ -20,6 +20,10 @@ type alias Fors =
         { klass : Grad
         , lyft : List Grad
         }
+    , koordinater :
+        { lat : Float
+        , long : Float
+        }
     }
 
 
@@ -63,11 +67,19 @@ hamtaForsar toMsg =
 
 forsDecoder : D.Decoder Fors
 forsDecoder =
-    D.map4 Fors
+    D.map5 Fors
         (D.field "namn" D.string)
         (D.field "langd" D.int)
         (D.field "fallhojd" D.int)
         (D.field "gradering" graderingDecoder)
+        (D.field "koordinater" koordinaterDecoder)
+
+
+koordinaterDecoder : D.Decoder { lat : Float, long : Float }
+koordinaterDecoder =
+    D.map2 (\lat long -> { lat = lat, long = long })
+        (D.field "lat" D.float)
+        (D.field "long" D.float)
 
 
 graderingDecoder : D.Decoder { klass : Grad, lyft : List Grad }
