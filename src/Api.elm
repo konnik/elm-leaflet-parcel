@@ -1,4 +1,4 @@
-module Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag, gradToString, hamtaForsar, hamtaLan, hamtaVattendrag, nyFors, nyttVattendrag, raderaFors, raderaVattendrag, uppdateraFors, uppdateraVattendrag)
+module Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag, gradFromString, gradToString, hamtaForsar, hamtaLan, hamtaVattendrag, nyFors, nyttVattendrag, raderaFors, raderaVattendrag, uppdateraFors, uppdateraVattendrag)
 
 import Api.Common exposing (..)
 import Auth exposing (Session)

@@ -1,6 +1,6 @@
 module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, view)
 
-import Api exposing (Fors, Resurs(..), Vattendrag)
+import Api exposing (Fors, Grad, Resurs(..), Vattendrag)
 import Auth exposing (Session)
 import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
@@ -9,7 +9,10 @@ import Element.Font as Font
 import Element.Input as Input
 import Http
 import Process
+import String
+import String.Verify exposing (isInt, notBlank)
 import Task
+import Verify exposing (validate, verify)
 
 
 type alias Model =
@@ -247,7 +250,87 @@ fel text =
 
 validera : Form -> Result String Fors
 validera form =
-    Err "not implemented"
+    formValidator form
+        |> Result.mapError (\( first, rest ) -> String.join " " (first :: rest))
+
+
+tillFors : String -> Int -> Int -> Grad -> List Grad -> { lat : Float, long : Float } -> Fors
+tillFors namn langd fallhojd klass lyft koordinater =
+    { namn = namn
+    , langd = langd
+    , fallhojd = fallhojd
+    , gradering =
+        { klass = klass
+        , lyft = lyft
+        }
+    , koordinater = koordinater
+    , flode =
+        { smhipunkt = 0
+        , minimum = 0
+        , maximum = 0
+        , optimal = 0
+        }
+    , vattendrag = []
+    , lan = []
+    }
+
+
+formValidator : Verify.Validator String Form Fors
+formValidator =
+    validate tillFors
+        |> verify .namn (notBlank "Namn måste anges")
+        |> verify .langd (isInt "Längd måste vara ett heltal")
+        |> verify .fallhojd (isInt "Fallhöjd måste vara ett heltal")
+        |> verify .klass (validGrad (\gradStr -> "Ogiltig klass: " ++ gradStr))
+        |> verify .lyft (validLyft (\gradStr -> "Ogiltig lyft: " ++ gradStr))
+        |> verify .koordinater (\_ -> Err ( "Stop!", [] ))
+
+
+validLyft : (String -> error) -> Verify.Validator error String (List Grad)
+validLyft toError inputStr =
+    let
+        results : List (Result ( String, List String ) Grad)
+        results =
+            if String.trim inputStr |> String.isEmpty then
+                []
+
+            else
+                String.split "," inputStr
+                    |> List.map String.trim
+                    |> List.map (validGrad (\str -> "'" ++ str ++ "'"))
+
+        oks : List Grad
+        oks =
+            results |> List.filterMap Result.toMaybe
+
+        errors : List String
+        errors =
+            results
+                |> List.filterMap
+                    (\res ->
+                        case res of
+                            Ok _ ->
+                                Nothing
+
+                            Err ( first, rest ) ->
+                                Just <| String.join "," (first :: rest)
+                    )
+    in
+    if List.isEmpty errors then
+        Ok oks
+
+    else
+        Err ( toError <| String.join ", " errors, [] )
+
+
+validGrad : (String -> error) -> Verify.Validator error String Grad
+validGrad toError inputStr =
+    case Api.gradFromString inputStr of
+        Just grad ->
+            Ok grad
+
+        Nothing ->
+            Err ( toError inputStr, [] )
 
 
 view : Model -> Element Msg
@@ -319,6 +402,7 @@ formView form =
             [ input "Klass" form.klass InputKlass
             , input "Lyft" form.lyft InputLyft
             ]
+        , input "Koordinater (lat, long)" form.koordinater InputKoordinater
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
             [ input "Min" form.minimum InputMinimum
