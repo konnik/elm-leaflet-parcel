@@ -283,7 +283,24 @@ formValidator =
         |> verify .fallhojd (isInt "Fallhöjd måste vara ett heltal")
         |> verify .klass (validGrad (\gradStr -> "Ogiltig klass: " ++ gradStr))
         |> verify .lyft (validLyft (\gradStr -> "Ogiltig lyft: " ++ gradStr))
-        |> verify .koordinater (\_ -> Err ( "Stop!", [] ))
+        |> verify .koordinater (validKoordinater "Felaktiga koordinater.")
+
+
+validKoordinater : error -> Verify.Validator error String { lat : Float, long : Float }
+validKoordinater error inputStr =
+    let
+        coords : List (Maybe Float)
+        coords =
+            inputStr
+                |> String.split ","
+                |> List.map (String.trim >> String.toFloat)
+    in
+    case coords of
+        [ Just lat, Just long ] ->
+            Ok { lat = lat, long = long }
+
+        _ ->
+            Err ( error, [] )
 
 
 validLyft : (String -> error) -> Verify.Validator error String (List Grad)
