@@ -1,18 +1,20 @@
 module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, view)
 
-import Api exposing (Fors, Grad, Resurs(..), Vattendrag)
+import Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag)
 import Auth exposing (Session)
+import Dict exposing (Dict)
 import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Html exposing (s)
 import Http
 import Process
 import String
 import String.Verify exposing (isInt, notBlank)
 import Task
-import Verify exposing (validate, verify)
+import Verify exposing (Validator, fromMaybe, validate, verify)
 
 
 type alias Model =
@@ -20,6 +22,8 @@ type alias Model =
     , form : Form
     , status : Status
     , meddelande : Maybe Meddelande
+    , lan : Dict Int Lan
+    , vattendrag : Dict Int Vattendrag
     }
 
 
@@ -80,7 +84,7 @@ type Msg
     | UppdateraModel Model
 
 
-init : Session -> ( Model, Cmd Msg )
+init : Session -> List Lan -> List (Resurs Vattendrag) -> ( Model, Cmd Msg )
 init =
     nytt
 
@@ -102,19 +106,21 @@ emptyForm =
     }
 
 
-nytt : Session -> ( Model, Cmd Msg )
-nytt session =
+nytt : Session -> List Lan -> List (Resurs Vattendrag) -> ( Model, Cmd Msg )
+nytt session lan vattendrag =
     ( { id = Nothing
       , form = emptyForm
       , status = Inmatning
       , meddelande = Nothing
+      , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
+      , vattendrag = Dict.fromList <| List.map (\(Resurs id v) -> ( id, v )) vattendrag
       }
     , Cmd.none
     )
 
 
-redigera : Session -> Resurs Fors -> ( Model, Cmd Msg )
-redigera session (Resurs id fors) =
+redigera : Session -> List Lan -> List (Resurs Vattendrag) -> Resurs Fors -> ( Model, Cmd Msg )
+redigera session lan vattendrag (Resurs id fors) =
     ( { id = Just id
       , form =
             { emptyForm
@@ -133,6 +139,8 @@ redigera session (Resurs id fors) =
             }
       , status = Inmatning
       , meddelande = Nothing
+      , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
+      , vattendrag = Dict.fromList <| List.map (\(Resurs x v) -> ( x, v )) vattendrag
       }
     , Cmd.none
     )
@@ -254,8 +262,8 @@ validera form =
         |> Result.mapError (\( first, rest ) -> String.join " " (first :: rest))
 
 
-tillFors : String -> Int -> Int -> Grad -> List Grad -> { lat : Float, long : Float } -> Fors
-tillFors namn langd fallhojd klass lyft koordinater =
+tillFors : String -> Int -> Int -> Grad -> List Grad -> { lat : Float, long : Float } -> Int -> Int -> Int -> Int -> List Lan -> Fors
+tillFors namn langd fallhojd klass lyft koordinater smhipunkt minimum maximum optimal lan =
     { namn = namn
     , langd = langd
     , fallhojd = fallhojd
@@ -265,13 +273,13 @@ tillFors namn langd fallhojd klass lyft koordinater =
         }
     , koordinater = koordinater
     , flode =
-        { smhipunkt = 0
-        , minimum = 0
-        , maximum = 0
-        , optimal = 0
+        { smhipunkt = smhipunkt
+        , minimum = minimum
+        , maximum = maximum
+        , optimal = optimal
         }
     , vattendrag = []
-    , lan = []
+    , lan = lan
     }
 
 
@@ -284,6 +292,16 @@ formValidator =
         |> verify .klass (validGrad (\gradStr -> "Ogiltig klass: " ++ gradStr))
         |> verify .lyft (validLyft (\gradStr -> "Ogiltig lyft: " ++ gradStr))
         |> verify .koordinater (validKoordinater "Felaktiga koordinater.")
+        |> verify .smhipunkt (fromMaybe String.toInt "Smhipunkt måste vara ett heltal.")
+        |> verify .minimum (fromMaybe String.toInt "Flöde min måste vara ett heltal.")
+        |> verify .maximum (fromMaybe String.toInt "Flöde max måste vara ett heltal.")
+        |> verify .optimal (fromMaybe String.toInt "Flöde optimal måste vara ett heltal.")
+        |> verify .lan (validLanLista (\id -> "Ogiltigt län: " ++ String.fromInt id))
+
+
+validLanLista : (Int -> error) -> Verify.Validator error String (List Lan)
+validLanLista toError inputStr =
+    Err ( toError 1, [] )
 
 
 validKoordinater : error -> Verify.Validator error String { lat : Float, long : Float }
@@ -422,9 +440,9 @@ formView form =
         , input "Koordinater (lat, long)" form.koordinater InputKoordinater
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
-            [ input "Min" form.minimum InputMinimum
-            , input "Max" form.maximum InputMaximum
-            , input "Optimal" form.optimal InputOptimal
+            [ input "Flöde min" form.minimum InputMinimum
+            , input "Flöde max" form.maximum InputMaximum
+            , input "Flöde optimal" form.optimal InputOptimal
             ]
         , input "Vattendrag" form.vattendrag InputVattendrag
         , input "Län" form.lan InputLan

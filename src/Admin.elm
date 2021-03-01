@@ -84,7 +84,7 @@ init _ url key =
                     VattendragPage.init session
 
                 ( forsModel, forsCmd ) =
-                    ForsPage.init session
+                    ForsPage.init session [] []
             in
             ( Inloggad
                 { key = key
@@ -135,7 +135,7 @@ update msg model =
                 |> refreshDashboard
 
         RedigeraFors fors ->
-            ForsPage.redigera model.session fors
+            ForsPage.redigera model.session model.lan model.vattendrag fors
                 |> Tuple.mapFirst
                     (\m ->
                         { model
