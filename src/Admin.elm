@@ -53,6 +53,7 @@ type Msg
     | GotLan (Result Http.Error (List Lan))
     | GotUser (Result Http.Error UserInfo)
     | RedigeraVattendrag (Resurs Vattendrag)
+    | NyFors
     | RedigeraFors (Resurs Fors)
     | NyttVattendrag
     | UrlRequested Browser.UrlRequest
@@ -133,6 +134,17 @@ update msg model =
         NavigeraTillDashboard ->
             ( { model | route = Dashboard }, Cmd.none )
                 |> refreshDashboard
+
+        NyFors ->
+            ForsPage.nytt model.session model.lan model.vattendrag
+                |> Tuple.mapFirst
+                    (\m ->
+                        { model
+                            | forsModel = m
+                            , route = Route.RedigeraFors
+                        }
+                    )
+                |> Tuple.mapSecond (Cmd.map ForsFormMsg)
 
         RedigeraFors fors ->
             ForsPage.redigera model.session model.lan model.vattendrag fors
@@ -298,7 +310,7 @@ headerView model =
 dashboardView : Model -> Element Msg
 dashboardView model =
     column [ spacing 30 ]
-        [ sektionView "Forsar" (List.length model.forsar) Nothing <|
+        [ sektionView "Forsar" (List.length model.forsar) (Just NyFors) <|
             forsarView model.forsar
         , sektionView "Vattendrag" (List.length model.vattendrag) (Just NyttVattendrag) <|
             vattendragView model.vattendrag
