@@ -258,12 +258,12 @@ fel text =
 
 validera : Model -> Result String Fors
 validera model =
-    formValidator model.lan model.form
+    formValidator model model.form
         |> Result.mapError (\( first, rest ) -> String.join " " (first :: rest))
 
 
-tillFors : String -> Int -> Int -> Grad -> List Grad -> { lat : Float, long : Float } -> Int -> Int -> Int -> Int -> List Lan -> Fors
-tillFors namn langd fallhojd klass lyft koordinater smhipunkt minimum maximum optimal lan =
+tillFors : String -> Int -> Int -> Grad -> List Grad -> { lat : Float, long : Float } -> Int -> Int -> Int -> Int -> List Lan -> List { id : Int, namn : String } -> Fors
+tillFors namn langd fallhojd klass lyft koordinater smhipunkt minimum maximum optimal lan vattendrag =
     { namn = namn
     , langd = langd
     , fallhojd = fallhojd
@@ -278,13 +278,13 @@ tillFors namn langd fallhojd klass lyft koordinater smhipunkt minimum maximum op
         , maximum = maximum
         , optimal = optimal
         }
-    , vattendrag = []
+    , vattendrag = vattendrag
     , lan = lan
     }
 
 
-formValidator : Dict Int Lan -> Verify.Validator String Form Fors
-formValidator lanDict =
+formValidator : { a | lan : Dict Int Lan, vattendrag : Dict Int Vattendrag } -> Verify.Validator String Form Fors
+formValidator { lan, vattendrag } =
     validate tillFors
         |> verify .namn (notBlank "Namn måste anges")
         |> verify .langd (isInt "Längd måste vara ett heltal")
@@ -296,7 +296,37 @@ formValidator lanDict =
         |> verify .minimum (fromMaybe String.toInt "Flöde min måste vara ett heltal.")
         |> verify .maximum (fromMaybe String.toInt "Flöde max måste vara ett heltal.")
         |> verify .optimal (fromMaybe String.toInt "Flöde optimal måste vara ett heltal.")
-        |> verify .lan (validLanLista (validLan lanDict) (\error -> "Ogiltigt län: " ++ error))
+        |> verify .lan (valideraLanLista lan)
+        |> verify .vattendrag (valideraVattendragLista vattendrag)
+
+
+valideraVattendragLista : Dict Int Vattendrag -> Validator String String (List { id : Int, namn : String })
+valideraVattendragLista giltigaVattendrag =
+    validLista (validVattendrag giltigaVattendrag) (\error -> "Ogiltigt vattendrag: " ++ error)
+        |> Verify.compose (ejTomLista "Ange minst ett vattendrag.")
+
+
+valideraLanLista : Dict Int Lan -> Validator String String (List Lan)
+valideraLanLista giltigaLan =
+    validLista (validLan giltigaLan) (\error -> "Ogiltigt lan: " ++ error)
+        |> Verify.compose (ejTomLista "Ange minst ett län.")
+
+
+ejTomLista : error -> Validator error (List a) (List a)
+ejTomLista error lista =
+    case lista of
+        [] ->
+            Err ( error, [] )
+
+        _ ->
+            Ok lista
+
+
+validVattendrag : Dict Int Vattendrag -> Int -> Result String { id : Int, namn : String }
+validVattendrag d id =
+    Dict.get id d
+        |> Result.fromMaybe ("Vattendrag med id " ++ String.fromInt id ++ " saknas.")
+        |> Result.map (\v -> { id = id, namn = v.namn })
 
 
 validLan : Dict Int Lan -> Int -> Result String Lan
@@ -304,21 +334,25 @@ validLan d id =
     Dict.get id d |> Result.fromMaybe ("Län med id " ++ String.fromInt id ++ " saknas.")
 
 
-validLanLista : (Int -> Result String Lan) -> (String -> error) -> Verify.Validator error String (List Lan)
-validLanLista toLan toError inputStr =
+validLista : (Int -> Result String a) -> (String -> error) -> Verify.Validator error String (List a)
+validLista toLan toError inputStr =
     let
-        parseLanId : String -> Result String Lan
+        parseLanId : String -> Result String a
         parseLanId idStr =
             String.toInt idStr
-                |> Result.fromMaybe ("Felaktigt format på län: " ++ idStr)
+                |> Result.fromMaybe ("Felaktigt format: " ++ idStr)
                 |> Result.andThen toLan
 
-        results : List (Result String Lan)
+        results : List (Result String a)
         results =
-            String.split "," inputStr
-                |> List.map (String.trim >> parseLanId)
+            if String.trim inputStr == "" then
+                []
 
-        oks : List Lan
+            else
+                String.split "," inputStr
+                    |> List.map (String.trim >> parseLanId)
+
+        oks : List a
         oks =
             results |> List.filterMap Result.toMaybe
 
