@@ -92,7 +92,42 @@ uppdateraFors :
     -> (Result Http.Error (Resurs Fors) -> msg)
     -> Cmd msg
 uppdateraFors session (Resurs id fors) toMsg =
-    Cmd.none
+    let
+        body =
+            E.object
+                [ ( "id", E.int id )
+                , ( "namn", E.string fors.namn )
+                , ( "gradering"
+                  , E.object
+                        [ ( "klass", E.string <| gradToString fors.gradering.klass )
+                        , ( "lyft", E.list (gradToString >> E.string) fors.gradering.lyft )
+                        ]
+                  )
+                , ( "langd", E.int fors.langd )
+                , ( "fallhojd", E.int fors.fallhojd )
+                , ( "koordinater"
+                  , E.object
+                        [ ( "lat", E.float fors.koordinater.lat )
+                        , ( "long", E.float fors.koordinater.long )
+                        ]
+                  )
+                , ( "flode"
+                  , E.object
+                        [ ( "smhipunkt", E.int fors.flode.smhipunkt )
+                        , ( "minimum", E.int fors.flode.minimum )
+                        , ( "maximum", E.int fors.flode.maximum )
+                        , ( "optimal", E.int fors.flode.optimal )
+                        ]
+                  )
+                , ( "vattendrag", E.list (\v -> E.object [ ( "id", E.int v.id ), ( "namn", E.string v.namn ) ]) fors.vattendrag )
+                , ( "lan", E.list (\l -> E.object [ ( "id", E.int l.id ), ( "namn", E.string l.namn ) ]) fors.lan )
+                ]
+    in
+    put session
+        { url = "https://forsguiden-api.herokuapp.com/forsstracka/" ++ String.fromInt id
+        , expect = Http.expectJson toMsg (resurs forsDecoder)
+        , body = Http.jsonBody body
+        }
 
 
 forsDecoder : D.Decoder Fors
