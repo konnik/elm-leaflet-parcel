@@ -170,7 +170,7 @@ update session msg model =
             ( model, fordrojUppdatering 1000 { model | status = Inmatning, meddelande = Just <| fel "Det gick inte att radera forsen." } )
 
         Spara ->
-            case validera model.form of
+            case validera model of
                 Ok fors ->
                     ( { model | status = Sparar, meddelande = Nothing }
                     , case model.id of
@@ -256,9 +256,9 @@ fel text =
     { text = text, typ = Fel }
 
 
-validera : Form -> Result String Fors
-validera form =
-    formValidator form
+validera : Model -> Result String Fors
+validera model =
+    formValidator model.lan model.form
         |> Result.mapError (\( first, rest ) -> String.join " " (first :: rest))
 
 
@@ -283,8 +283,8 @@ tillFors namn langd fallhojd klass lyft koordinater smhipunkt minimum maximum op
     }
 
 
-formValidator : Verify.Validator String Form Fors
-formValidator =
+formValidator : Dict Int Lan -> Verify.Validator String Form Fors
+formValidator lanDict =
     validate tillFors
         |> verify .namn (notBlank "Namn måste anges")
         |> verify .langd (isInt "Längd måste vara ett heltal")
@@ -296,12 +296,50 @@ formValidator =
         |> verify .minimum (fromMaybe String.toInt "Flöde min måste vara ett heltal.")
         |> verify .maximum (fromMaybe String.toInt "Flöde max måste vara ett heltal.")
         |> verify .optimal (fromMaybe String.toInt "Flöde optimal måste vara ett heltal.")
-        |> verify .lan (validLanLista (\id -> "Ogiltigt län: " ++ String.fromInt id))
+        |> verify .lan (validLanLista (validLan lanDict) (\error -> "Ogiltigt län: " ++ error))
 
 
-validLanLista : (Int -> error) -> Verify.Validator error String (List Lan)
-validLanLista toError inputStr =
-    Err ( toError 1, [] )
+validLan : Dict Int Lan -> Int -> Result String Lan
+validLan d id =
+    Dict.get id d |> Result.fromMaybe ("Län med id " ++ String.fromInt id ++ " saknas.")
+
+
+validLanLista : (Int -> Result String Lan) -> (String -> error) -> Verify.Validator error String (List Lan)
+validLanLista toLan toError inputStr =
+    let
+        parseLanId : String -> Result String Lan
+        parseLanId idStr =
+            String.toInt idStr
+                |> Result.fromMaybe ("Felaktigt format på län: " ++ idStr)
+                |> Result.andThen toLan
+
+        results : List (Result String Lan)
+        results =
+            String.split "," inputStr
+                |> List.map (String.trim >> parseLanId)
+
+        oks : List Lan
+        oks =
+            results |> List.filterMap Result.toMaybe
+
+        errors : List String
+        errors =
+            results
+                |> List.filterMap
+                    (\res ->
+                        case res of
+                            Ok _ ->
+                                Nothing
+
+                            Err err ->
+                                Just err
+                    )
+    in
+    if List.isEmpty errors then
+        Ok oks
+
+    else
+        Err ( toError <| String.join ", " errors, [] )
 
 
 validKoordinater : error -> Verify.Validator error String { lat : Float, long : Float }
