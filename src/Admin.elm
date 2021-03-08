@@ -7,9 +7,11 @@ import Api exposing (Fors, Lan, Resurs(..), Vattendrag)
 import Auth exposing (UserInfo)
 import Browser
 import Browser.Navigation as Nav
-import Element exposing (Element, alignRight, column, el, fill, height, padding, px, row, spacing, text, width)
+import Element exposing (Element, alignRight, column, el, fill, height, htmlAttribute, padding, px, row, spacing, text, width)
 import Element.Font as Font
 import Element.Input
+import Html exposing (Html)
+import Html.Attributes as HtmlAttr
 import Http
 import OAuth
 import OAuth.Implicit as Implicit
@@ -384,3 +386,35 @@ lanView lan =
         |> text
         |> List.singleton
         |> Element.paragraph []
+
+
+
+-- KARTA
+
+
+kartaView : Element msg
+kartaView =
+    el
+        [ width (px 500)
+        , height (px 300)
+        ]
+    <|
+        Element.html (mapHtml "korvkarta")
+
+
+mapHtml : String -> Html msg
+mapHtml elementId =
+    Html.div
+        [ HtmlAttr.style "width" "100%"
+        , HtmlAttr.style "height" "100%"
+        , HtmlAttr.style "z-index" "0"
+        ]
+        [ Html.div
+            [ HtmlAttr.id elementId
+            , HtmlAttr.style "width" "100%"
+            , HtmlAttr.style "height" "100%"
+            , HtmlAttr.style "position" "relative"
+            , HtmlAttr.style "z-index" "0"
+            ]
+            [ Html.text "ölölöl" ]
+        ]
