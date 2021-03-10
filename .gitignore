@@ -3,3 +3,4 @@ elm-stuff
 dist
 .cache
 .DS_Store
+.vscode

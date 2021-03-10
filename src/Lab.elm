@@ -7,21 +7,24 @@ import Element.Font as Font
 import Element.Input
 import Html exposing (Html)
 import Html.Attributes as HtmlAttr
+import KartLab exposing (Kartlager(..))
 import Url
 
 
 type alias Model =
-    {}
+    { message : String }
 
 
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
+    | ValjKartlager KartLab.Kartlager
+    | GotKartEvent KartLab.Event
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ _ _ =
-    ( {}, Cmd.none )
+    ( { message = "!!!" }, KartLab.visaLager Topowebb )
 
 
 
@@ -30,7 +33,21 @@ init _ _ _ =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        ValjKartlager lager ->
+            ( model, KartLab.visaLager lager )
+
+        GotKartEvent (KartLab.OnClick lat long) ->
+            ( { model | message = String.fromFloat lat ++ ", " ++ String.fromFloat long }, Cmd.none )
+
+        GotKartEvent (KartLab.Unknown error) ->
+            ( { model | message = error }, Cmd.none )
+
+        UrlRequested _ ->
+            ( model, Cmd.none )
+
+        UrlChanged _ ->
+            ( model, Cmd.none )
 
 
 
@@ -41,18 +58,41 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Lab"
     , body =
-        [ Html.text "lkökl"
-        , karta
+        [ Element.layout [] <|
+            Element.column []
+                [ kartlagervaljare
+                , Element.html (karta "karta1")
+                , Element.text "korv korv korv"
+                , Element.html (karta "karta2")
+                , kartlagervaljare
+                , Element.text model.message
+                ]
         ]
     }
 
 
-karta : Html msg
-karta =
+kartlagervaljare : Element Msg
+kartlagervaljare =
+    Element.row [ Element.spacing 30 ]
+        [ lagerBtn "Orto" KartLab.Orto
+        , lagerBtn "Topowebb" KartLab.Topowebb
+        , lagerBtn "Topowebb nedtonad" KartLab.TopowebbNedtonad
+        ]
+
+
+lagerBtn : String -> KartLab.Kartlager -> Element Msg
+lagerBtn label karlager =
+    Element.Input.button
+        []
+        { label = Element.text label, onPress = Just (ValjKartlager karlager) }
+
+
+karta : String -> Html msg
+karta id =
     Html.div
-        [ HtmlAttr.id "map"
+        [ HtmlAttr.id id
         , HtmlAttr.style "width" "700"
-        , HtmlAttr.style "height" "800"
+        , HtmlAttr.style "height" "500"
         , HtmlAttr.style "border" "2px solid red"
         ]
         []
@@ -64,7 +104,7 @@ karta =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    KartLab.subscribe GotKartEvent
 
 
 main : Program () Model Msg
