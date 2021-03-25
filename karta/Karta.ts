@@ -13,26 +13,30 @@ export enum Bakgrundslager {
 }
 
 export class Karta {
+    id: string;
     map: Map;
     ortoLayer = skapaOrtofoto();
     topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);
     topowebbnedtonadLayer = skapaTopowebb(TopowebbVariant.NEDTONAD);
     markeringLager: MarkeringLayer = skapaMarkering();
 
-    constructor(elementId: string) {
+    constructor(id: string, bakgrundslager: Bakgrundslager = Bakgrundslager.TOPOWEBB) {
+        this.id = id;
         this.ortoLayer = skapaOrtofoto();
         this.topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);
         this.topowebbnedtonadLayer = skapaTopowebb(TopowebbVariant.NEDTONAD);
         this.markeringLager = skapaMarkering();
 
         this.map = new Map({
-            target: elementId,
+            target: id,
             layers: [this.ortoLayer, this.topowebbLayer, this.topowebbnedtonadLayer, this.markeringLager],
             view: new View({
                 center: [1909474.963338217, 8552634.820602188],
                 zoom: 11
             })
         });
+
+        this.valjBakgrundslager(bakgrundslager);
     }
 
     valjBakgrundslager(lager: Bakgrundslager): void {
@@ -55,6 +59,10 @@ export class Karta {
     }
 }
 
-export function skapa(elementId: string): Karta {
-    return new Karta(elementId);
+export function skapa(id: string): Karta {
+    return new Karta(id);
+}
+
+export function radera(karta: Karta): void {
+    karta.map.dispose();
 }

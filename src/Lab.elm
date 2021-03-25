@@ -2,29 +2,46 @@ module Lab exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
+import Dict exposing (Dict)
 import Element exposing (Element, alignRight, column, el, fill, height, htmlAttribute, padding, px, row, spacing, text, width)
 import Element.Font as Font
 import Element.Input
 import Html exposing (Html)
-import Html.Attributes as HtmlAttr
-import KartLab exposing (Kartlager(..))
+import Html.Attributes
+import KartLab exposing (Karta, Kartlager(..))
 import Url
 
 
 type alias Model =
-    { message : String }
+    { kartor : Dict String Karta
+    , message : String
+    , dolj : List Karta
+    }
 
 
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
-    | ValjKartlager KartLab.Kartlager
+    | ValjKartlager Karta Kartlager
     | GotKartEvent KartLab.Event
+    | NyKarta
+    | DoljKarta Karta
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ _ _ =
-    ( { message = "!!!" }, KartLab.visaLager Topowebb )
+    let
+        kartor =
+            [ "karta1", "karta2" ] |> List.map (\x -> ( x, KartLab.skapa x )) |> Dict.fromList
+    in
+    ( { kartor = kartor
+      , message = "Klicka gärna lite i kartan!"
+      , dolj = []
+      }
+    , Dict.values kartor
+        |> List.map KartLab.initiera
+        |> Cmd.batch
+    )
 
 
 
@@ -34,11 +51,32 @@ init _ _ _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ValjKartlager lager ->
-            ( model, KartLab.visaLager lager )
+        DoljKarta karta ->
+            let
+                dolj =
+                    if List.member karta model.dolj then
+                        List.filter (\k -> k /= karta) model.dolj
 
-        GotKartEvent (KartLab.OnClick lat long) ->
-            ( { model | message = String.fromFloat lat ++ ", " ++ String.fromFloat long }, Cmd.none )
+                    else
+                        karta :: model.dolj
+            in
+            ( { model | dolj = dolj }, Cmd.none )
+
+        NyKarta ->
+            let
+                id =
+                    "karta" ++ String.fromInt (Dict.size model.kartor + 1)
+
+                karta =
+                    KartLab.skapa id
+            in
+            ( { model | kartor = Dict.insert id karta model.kartor }, KartLab.initiera karta )
+
+        ValjKartlager karta lager ->
+            ( model, KartLab.visaLager lager karta )
+
+        GotKartEvent (KartLab.KlickIKarta id lat long) ->
+            ( { model | message = id ++ ": " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long }, Cmd.none )
 
         GotKartEvent (KartLab.Unknown error) ->
             ( { model | message = error }, Cmd.none )
@@ -60,42 +98,54 @@ view model =
     , body =
         [ Element.layout [] <|
             Element.column []
-                [ kartlagervaljare
-                , Element.html (karta "karta1")
-                , Element.text "korv korv korv"
-                , Element.html (karta "karta2")
-                , kartlagervaljare
+                [ Element.Input.button []
+                    { label = text "Lägg till karta!", onPress = Just NyKarta }
+                , column [] <| List.map (\( id, k ) -> kartaView (List.member k model.dolj) id k) (Dict.toList model.kartor |> List.sortBy Tuple.first)
                 , Element.text model.message
                 ]
         ]
     }
 
 
-kartlagervaljare : Element Msg
-kartlagervaljare =
-    Element.row [ Element.spacing 30 ]
-        [ lagerBtn "Orto" KartLab.Orto
-        , lagerBtn "Topowebb" KartLab.Topowebb
-        , lagerBtn "Topowebb nedtonad" KartLab.TopowebbNedtonad
+kartaView : Bool -> String -> Karta -> Element Msg
+kartaView hide rubrik karta =
+    let
+        display =
+            if hide then
+                "none"
+
+            else
+                "block"
+    in
+    column []
+        [ Element.el [ Font.size 30 ] <| Element.text rubrik
+        , Element.Input.button [] { label = text "Dölj", onPress = Just (DoljKarta karta) }
+        , kartlagervaljare karta
+        , el [ Element.htmlAttribute (Html.Attributes.style "display" display) ] <| KartLab.toElement karta
+        , text
+            (if hide then
+                "DOLD"
+
+             else
+                "SYNLIG"
+            )
         ]
 
 
-lagerBtn : String -> KartLab.Kartlager -> Element Msg
-lagerBtn label karlager =
+kartlagervaljare : Karta -> Element Msg
+kartlagervaljare karta =
+    Element.row [ Element.spacing 30 ]
+        [ lagerBtn "Orto" karta KartLab.Orto
+        , lagerBtn "Topowebb" karta KartLab.Topowebb
+        , lagerBtn "Topowebb nedtonad" karta KartLab.TopowebbNedtonad
+        ]
+
+
+lagerBtn : String -> Karta -> KartLab.Kartlager -> Element Msg
+lagerBtn label karta kartlager =
     Element.Input.button
         []
-        { label = Element.text label, onPress = Just (ValjKartlager karlager) }
-
-
-karta : String -> Html msg
-karta id =
-    Html.div
-        [ HtmlAttr.id id
-        , HtmlAttr.style "width" "700"
-        , HtmlAttr.style "height" "500"
-        , HtmlAttr.style "border" "2px solid red"
-        ]
-        []
+        { label = Element.text label, onPress = Just (ValjKartlager karta kartlager) }
 
 
 
