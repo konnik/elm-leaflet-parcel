@@ -50,6 +50,10 @@ export class Karta {
         this.markeringLager.setVisible(true);
     }
 
+    centreraKarta(longLat: Coordinate): void {
+        this.map.getView().setCenter(fromLonLat(longLat))
+    }
+
     onEnkelklick(callback: (a: Karta, b: Coordinate) => void) {
         const that = this;
         this.map.on('singleclick', function (event) {
@@ -66,3 +70,5 @@ export function skapa(id: string): Karta {
 export function radera(karta: Karta): void {
     karta.map.dispose();
 }
+
+

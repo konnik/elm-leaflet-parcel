@@ -1,4 +1,4 @@
-port module Karta exposing (Event(..), Karta, Kartlager(..), initiera, skapa, subscribe, toElement, visaLager)
+port module Karta exposing (Event(..), Karta, Kartlager(..), initiera, initieraMarkering, skapa, subscribe, toElement, visaLager)
 
 import Element exposing (Element)
 import Html exposing (Html)
@@ -39,6 +39,21 @@ initiera (Karta id) =
         E.object
             [ ( "typ", E.string "skapa_karta" )
             , ( "id", E.string id )
+            ]
+
+
+initieraMarkering : { lat : Float, long : Float } -> Karta -> Cmd msg
+initieraMarkering { lat, long } (Karta id) =
+    kartaOutgoing <|
+        E.object
+            [ ( "typ", E.string "skapa_karta" )
+            , ( "id", E.string id )
+            , ( "markering"
+              , E.object
+                    [ ( "lat", E.float lat )
+                    , ( "long", E.float long )
+                    ]
+              )
             ]
 
 

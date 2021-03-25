@@ -10,6 +10,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Html exposing (s)
 import Http
+import Karta exposing (Karta)
 import Process
 import String
 import String.Verify exposing (isInt, notBlank)
@@ -24,6 +25,7 @@ type alias Model =
     , meddelande : Maybe Meddelande
     , lan : Dict Int Lan
     , vattendrag : Dict Int Vattendrag
+    , karta : Karta
     }
 
 
@@ -108,19 +110,28 @@ emptyForm =
 
 nytt : Session -> List Lan -> List (Resurs Vattendrag) -> ( Model, Cmd Msg )
 nytt session lan vattendrag =
+    let
+        karta =
+            Karta.skapa "koordinaterMap"
+    in
     ( { id = Nothing
       , form = emptyForm
       , status = Inmatning
       , meddelande = Nothing
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs id v) -> ( id, v )) vattendrag
+      , karta = karta
       }
-    , Cmd.none
+    , Karta.initiera karta
     )
 
 
 redigera : Session -> List Lan -> List (Resurs Vattendrag) -> Resurs Fors -> ( Model, Cmd Msg )
 redigera session lan vattendrag (Resurs id fors) =
+    let
+        karta =
+            Karta.skapa "koordinaterMap"
+    in
     ( { id = Just id
       , form =
             { emptyForm
@@ -141,8 +152,9 @@ redigera session lan vattendrag (Resurs id fors) =
       , meddelande = Nothing
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs x v) -> ( x, v )) vattendrag
+      , karta = karta
       }
-    , Cmd.none
+    , Karta.initieraMarkering fors.koordinater karta
     )
 
 
@@ -464,7 +476,7 @@ redigeraView model =
     in
     column [ spacing 20, width fill ]
         [ rubrikView model.id
-        , formView model.form
+        , formView model.karta model.form
         , row [ spacing 20, width fill ]
             [ viewRadera model.status |> omId
             , knappSpara model.status
@@ -497,8 +509,8 @@ rubrikView maybeId =
     el [ Font.size 30 ] (text rubrik)
 
 
-formView : Form -> Element Msg
-formView form =
+formView : Karta -> Form -> Element Msg
+formView karta form =
     column [ spacing 20, width fill ]
         [ input "Namn" form.namn InputNamn
         , row [ spacing 20 ]
@@ -510,6 +522,7 @@ formView form =
             , input "Lyft" form.lyft InputLyft
             ]
         , input "Koordinater (lat, long)" form.koordinater InputKoordinater
+        , Karta.toElement karta
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
             [ input "Flöde min" form.minimum InputMinimum
