@@ -9,7 +9,8 @@ import Element.Input as Input
 import Fors
 import Html exposing (Attribute, Html, div, h1)
 import Html.Attributes as HtmlAttr
-import Karta
+import KartaOld
+import Lab
 
 
 type alias Model =
@@ -36,7 +37,7 @@ update msg model =
     case msg of
         ToggleSidebar ->
             ( { model | showSidebar = not model.showSidebar }
-            , Karta.invalidera
+            , KartaOld.invalidera
             )
 
 

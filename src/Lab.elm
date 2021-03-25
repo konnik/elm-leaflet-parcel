@@ -8,7 +8,7 @@ import Element.Font as Font
 import Element.Input
 import Html exposing (Html)
 import Html.Attributes
-import KartLab exposing (Karta, Kartlager(..))
+import Karta exposing (Karta, Kartlager(..))
 import Url
 
 
@@ -23,7 +23,7 @@ type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | ValjKartlager Karta Kartlager
-    | GotKartEvent KartLab.Event
+    | GotKartEvent Karta.Event
     | NyKarta
     | DoljKarta Karta
 
@@ -32,14 +32,14 @@ init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ _ _ =
     let
         kartor =
-            [ "karta1", "karta2" ] |> List.map (\x -> ( x, KartLab.skapa x )) |> Dict.fromList
+            [ "karta1", "karta2" ] |> List.map (\x -> ( x, Karta.skapa x )) |> Dict.fromList
     in
     ( { kartor = kartor
       , message = "Klicka gärna lite i kartan!"
       , dolj = []
       }
     , Dict.values kartor
-        |> List.map KartLab.initiera
+        |> List.map Karta.initiera
         |> Cmd.batch
     )
 
@@ -68,17 +68,17 @@ update msg model =
                     "karta" ++ String.fromInt (Dict.size model.kartor + 1)
 
                 karta =
-                    KartLab.skapa id
+                    Karta.skapa id
             in
-            ( { model | kartor = Dict.insert id karta model.kartor }, KartLab.initiera karta )
+            ( { model | kartor = Dict.insert id karta model.kartor }, Karta.initiera karta )
 
         ValjKartlager karta lager ->
-            ( model, KartLab.visaLager lager karta )
+            ( model, Karta.visaLager lager karta )
 
-        GotKartEvent (KartLab.KlickIKarta id lat long) ->
+        GotKartEvent (Karta.KlickIKarta id lat long) ->
             ( { model | message = id ++ ": " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long }, Cmd.none )
 
-        GotKartEvent (KartLab.Unknown error) ->
+        GotKartEvent (Karta.Unknown error) ->
             ( { model | message = error }, Cmd.none )
 
         UrlRequested _ ->
@@ -121,7 +121,7 @@ kartaView hide rubrik karta =
         [ Element.el [ Font.size 30 ] <| Element.text rubrik
         , Element.Input.button [] { label = text "Dölj", onPress = Just (DoljKarta karta) }
         , kartlagervaljare karta
-        , el [ Element.htmlAttribute (Html.Attributes.style "display" display) ] <| KartLab.toElement karta
+        , el [ Element.htmlAttribute (Html.Attributes.style "display" display) ] <| Karta.toElement karta
         , text
             (if hide then
                 "DOLD"
@@ -135,13 +135,13 @@ kartaView hide rubrik karta =
 kartlagervaljare : Karta -> Element Msg
 kartlagervaljare karta =
     Element.row [ Element.spacing 30 ]
-        [ lagerBtn "Orto" karta KartLab.Orto
-        , lagerBtn "Topowebb" karta KartLab.Topowebb
-        , lagerBtn "Topowebb nedtonad" karta KartLab.TopowebbNedtonad
+        [ lagerBtn "Orto" karta Karta.Orto
+        , lagerBtn "Topowebb" karta Karta.Topowebb
+        , lagerBtn "Topowebb nedtonad" karta Karta.TopowebbNedtonad
         ]
 
 
-lagerBtn : String -> Karta -> KartLab.Kartlager -> Element Msg
+lagerBtn : String -> Karta -> Karta.Kartlager -> Element Msg
 lagerBtn label karta kartlager =
     Element.Input.button
         []
@@ -154,7 +154,7 @@ lagerBtn label karta kartlager =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    KartLab.subscribe GotKartEvent
+    Karta.subscribe GotKartEvent
 
 
 main : Program () Model Msg

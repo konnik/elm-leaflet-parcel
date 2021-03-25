@@ -1,13 +1,12 @@
 
 import { Elm } from './src/Lab.elm'
+import 'ol/ol.css';
+import { skapa as skapaKarta, radera as raderaKarta, Karta } from "./karta/Karta"
 
 var app = Elm.Lab.init({
     node: document.getElementById('elm')
 });
 
-
-import 'ol/ol.css';
-import { skapa as skapaKarta, radera as raderaKarta, Karta } from "./karta/Karta"
 
 const sverigeExtent = [1118248.7982969885, 7696979.602230988, 2324119.356523609, 8764652.013318047]
 const gavle = [60.72975, 17.12693];
@@ -15,7 +14,7 @@ const sverige = [63.031926, 15.451756]
 
 function enkelklickHandler(karta, longLat) {
     karta.placeraMarkering(longLat);
-    app.ports.receive.send({
+    app.ports.kartaIncoming.send({
         "typ": "klick_i_karta",
         "id": karta.id,
         "lat": longLat[1],
@@ -26,7 +25,7 @@ function enkelklickHandler(karta, longLat) {
 
 const kartor = {}
 
-app.ports.send.subscribe(function (message) {
+app.ports.kartaOutgoing.subscribe(function (message) {
     console.log(message);
     if (message.typ === "skapa_karta") {
 
