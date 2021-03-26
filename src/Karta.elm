@@ -1,4 +1,4 @@
-port module Karta exposing (Event(..), Karta, Kartlager(..), identitet, initiera, placeraKartnal, subscribe, toElement, visaLager)
+port module Karta exposing (Event(..), Karta, Kartlager(..), identitet, initiera, navigeraTill, placeraKartnal, subscribe, toElement, visaLager)
 
 import Element exposing (Element)
 import Html exposing (Html)
@@ -66,6 +66,17 @@ placeraKartnal { lat, long } (Karta { id }) =
     kartaOutgoing <|
         E.object
             [ ( "typ", E.string "placera_kartnal" )
+            , ( "id", E.string id )
+            , ( "lat", E.float lat )
+            , ( "long", E.float long )
+            ]
+
+
+navigeraTill : { lat : Float, long : Float } -> Karta -> Cmd msg
+navigeraTill { lat, long } (Karta { id }) =
+    kartaOutgoing <|
+        E.object
+            [ ( "typ", E.string "navigera_till" )
             , ( "id", E.string id )
             , ( "lat", E.float lat )
             , ( "long", E.float long )

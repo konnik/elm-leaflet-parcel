@@ -10,7 +10,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Html exposing (s)
 import Http
-import Karta exposing (Karta)
+import Karta exposing (Karta, placeraKartnal)
 import Process
 import String
 import String.Verify exposing (isInt, notBlank)
@@ -26,6 +26,7 @@ type alias Model =
     , lan : Dict Int Lan
     , vattendrag : Dict Int Vattendrag
     , karta : Maybe Karta
+    , koordinat : Maybe { lat : Float, long : Float }
     }
 
 
@@ -95,6 +96,7 @@ init =
       , lan = Dict.empty
       , vattendrag = Dict.empty
       , karta = Nothing
+      , koordinat = Nothing
       }
     , Cmd.none
     )
@@ -126,6 +128,7 @@ nytt session lan vattendrag =
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs id v) -> ( id, v )) vattendrag
       , karta = Nothing
+      , koordinat = Nothing
       }
     , Karta.initiera "koordinater"
     )
@@ -154,6 +157,7 @@ redigera session lan vattendrag (Resurs id fors) =
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs x v) -> ( x, v )) vattendrag
       , karta = Nothing
+      , koordinat = Just fors.koordinater
       }
     , Karta.initiera "koordinater"
     )
@@ -163,8 +167,28 @@ updateKarta : Karta.Event -> Model -> ( Model, Cmd Msg )
 updateKarta kartevent model =
     case kartevent of
         Karta.Skapad karta ->
-            ( { model | karta = Just karta }
-            , Cmd.none
+            ( { model | karta = Just karta, koordinat = Nothing }
+            , model.koordinat
+                |> Maybe.map
+                    (\x ->
+                        Cmd.batch
+                            [ Karta.placeraKartnal x karta
+                            , Karta.navigeraTill x karta
+                            ]
+                    )
+                |> Maybe.withDefault Cmd.none
+            )
+
+        Karta.KlickIKarta karta lat long ->
+            let
+                oldForm =
+                    model.form
+
+                coordStr =
+                    String.fromFloat lat ++ ", " ++ String.fromFloat long
+            in
+            ( { model | form = { oldForm | koordinater = coordStr } }
+            , karta |> Karta.placeraKartnal { lat = lat, long = long }
             )
 
         _ ->

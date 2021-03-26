@@ -73,6 +73,8 @@ function processMessage(message) {
         k.karta.valjBakgrundslager(message.lagernamn);
     } else if (message.typ === "placera_kartnal") {
         k.karta.placeraMarkering([message.long, message.lat]);
+    } else if (message.typ === "navigera_till") {
+        k.karta.centreraKarta([message.long, message.lat]);
     } else {
         throw Error("okänd meddelandetyp: " + message.typ);
     }
