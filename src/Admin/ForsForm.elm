@@ -3,7 +3,7 @@ module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, update
 import Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag)
 import Auth exposing (Session)
 import Dict exposing (Dict)
-import Element exposing (Attribute, Element, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, px, rgb255, row, shrink, spacing, text, width)
+import Element exposing (Attribute, Element, alignBottom, alignRight, centerX, centerY, column, el, fill, height, maximum, minimum, padding, paddingEach, paddingXY, px, rgb255, row, shrink, spacing, text, width)
 import Element.Background as Bg
 import Element.Border as Border
 import Element.Font as Font
@@ -26,6 +26,7 @@ type alias Model =
     , lan : Dict Int Lan
     , vattendrag : Dict Int Vattendrag
     , karta : Maybe Karta
+    , visaKarta : Bool
     , koordinat : Maybe { lat : Float, long : Float }
     }
 
@@ -85,6 +86,7 @@ type Msg
     | RaderaAvbruten
     | RaderaResult (Result Http.Error ())
     | UppdateraModel Model
+    | VisaDoljKarta
 
 
 init : ( Model, Cmd Msg )
@@ -96,6 +98,7 @@ init =
       , lan = Dict.empty
       , vattendrag = Dict.empty
       , karta = Nothing
+      , visaKarta = True
       , koordinat = Nothing
       }
     , Cmd.none
@@ -128,6 +131,7 @@ nytt session lan vattendrag =
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs id v) -> ( id, v )) vattendrag
       , karta = Nothing
+      , visaKarta = True
       , koordinat = Nothing
       }
     , Karta.initiera "koordinater"
@@ -157,6 +161,7 @@ redigera session lan vattendrag (Resurs id fors) =
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs x v) -> ( x, v )) vattendrag
       , karta = Nothing
+      , visaKarta = True
       , koordinat = Just fors.koordinater
       }
     , Karta.initiera "koordinater"
@@ -185,7 +190,7 @@ updateKarta kartevent model =
                     model.form
 
                 coordStr =
-                    String.fromFloat lat ++ ", " ++ String.fromFloat long
+                    String.left 8 (String.fromFloat lat) ++ ", " ++ String.left 8 (String.fromFloat long)
             in
             ( { model | form = { oldForm | koordinater = coordStr } }
             , karta |> Karta.placeraKartnal { lat = lat, long = long }
@@ -198,6 +203,9 @@ updateKarta kartevent model =
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
+        VisaDoljKarta ->
+            ( { model | visaKarta = not model.visaKarta }, Cmd.none )
+
         Radera ->
             ( { model | status = BekraftaRadera }, Cmd.none )
 
@@ -513,7 +521,7 @@ redigeraView model =
     in
     column [ spacing 20, width fill ]
         [ rubrikView model.id
-        , formView model.karta model.form
+        , formView model.visaKarta model.karta model.form
         , row [ spacing 20, width fill ]
             [ viewRadera model.status |> omId
             , knappSpara model.status
@@ -546,8 +554,8 @@ rubrikView maybeId =
     el [ Font.size 30 ] (text rubrik)
 
 
-formView : Maybe Karta -> Form -> Element Msg
-formView maybeKarta form =
+formView : Bool -> Maybe Karta -> Form -> Element Msg
+formView visaKarta maybeKarta form =
     column [ spacing 20, width fill ]
         [ input "Namn" form.namn InputNamn
         , row [ spacing 20 ]
@@ -558,8 +566,11 @@ formView maybeKarta form =
             [ input "Klass" form.klass InputKlass
             , input "Lyft" form.lyft InputLyft
             ]
-        , input "Koordinater (lat, long)" form.koordinater InputKoordinater
-        , Maybe.map Karta.toElement maybeKarta |> Maybe.withDefault (Element.text "Initerar karta...")
+        , row [ spacing 20, width fill ]
+            [ input "Koordinater (lat, long)" form.koordinater InputKoordinater
+            , el [ alignBottom ] <| knapp { label = "...", state = Aktiv } VisaDoljKarta
+            ]
+        , el [ paddingXY 0 10 ] (Maybe.map (Karta.toElement visaKarta) maybeKarta |> Maybe.withDefault (Element.text "Initerar karta..."))
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
             [ input "Flöde min" form.minimum InputMinimum

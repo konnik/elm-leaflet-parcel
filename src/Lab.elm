@@ -92,18 +92,10 @@ view model =
 
 kartaView : Bool -> Karta -> Element Msg
 kartaView hide karta =
-    let
-        display =
-            if hide then
-                "none"
-
-            else
-                "block"
-    in
     column []
         [ Element.Input.button [] { label = text "Dölj", onPress = Just DoljKarta }
         , kartlagervaljare karta
-        , el [ Element.htmlAttribute (Html.Attributes.style "display" display) ] <| Karta.toElement karta
+        , Karta.toElement (not hide) karta
         , text
             (if hide then
                 "DOLD"

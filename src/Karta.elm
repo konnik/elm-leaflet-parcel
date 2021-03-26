@@ -83,11 +83,21 @@ navigeraTill { lat, long } (Karta { id }) =
             ]
 
 
-toElement : Karta -> Element msg
-toElement (Karta { id }) =
+toElement : Bool -> Karta -> Element msg
+toElement visible (Karta { id }) =
+    let
+        display =
+            if visible then
+                "block"
+
+            else
+                "none"
+    in
+    --    Element.el [ Element.htmlAttribute (HtmlAttr.style "display" display) ] <|
     Element.html <|
         Html.div
             [ HtmlAttr.id id
+            , HtmlAttr.style "display" display
             , HtmlAttr.style "width" "600"
             , HtmlAttr.style "height" "300"
             , HtmlAttr.style "border" "2px solid red"
