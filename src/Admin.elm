@@ -1,4 +1,4 @@
-module Admin exposing (Model, Msg, init, main, subscriptions, update)
+module Admin exposing (Model, Msg, init, main, update)
 
 import Admin.ForsForm as ForsPage
 import Admin.Route as Route exposing (Route(..))
@@ -13,6 +13,7 @@ import Element.Input
 import Html exposing (Html)
 import Html.Attributes as HtmlAttr
 import Http
+import Karta
 import OAuth
 import OAuth.Implicit as Implicit
 import Url
@@ -63,6 +64,7 @@ type Msg
     | VattendragMsg VattendragPage.Msg
     | ForsFormMsg ForsPage.Msg
     | NavigeraTillDashboard
+    | GotKartEvent Karta.Event
 
 
 
@@ -87,7 +89,7 @@ init _ url key =
                     VattendragPage.init session
 
                 ( forsModel, forsCmd ) =
-                    ForsPage.init session [] []
+                    ForsPage.init
             in
             ( Inloggad
                 { key = key
@@ -133,6 +135,11 @@ authUpdate msg authState =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GotKartEvent event ->
+            ForsPage.updateKarta event model.forsModel
+                |> Tuple.mapFirst (\m -> { model | forsModel = m })
+                |> Tuple.mapSecond (Cmd.map ForsFormMsg)
+
         NavigeraTillDashboard ->
             ( { model | route = Dashboard }, Cmd.none )
                 |> refreshDashboard
@@ -251,8 +258,18 @@ refreshDashboard ( model, cmd ) =
 
 
 subscriptions : AuthState -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions authState =
+    case authState of
+        Inloggad model ->
+            subscriptionsInloggad model
+
+        _ ->
+            Sub.none
+
+
+subscriptionsInloggad : Model -> Sub Msg
+subscriptionsInloggad model =
+    Karta.subscribe GotKartEvent
 
 
 

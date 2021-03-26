@@ -1,4 +1,4 @@
-module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, view)
+module Admin.ForsForm exposing (Model, Msg, init, nytt, redigera, update, updateKarta, view)
 
 import Api exposing (Fors, Grad, Lan, Resurs(..), Vattendrag)
 import Auth exposing (Session)
@@ -25,7 +25,7 @@ type alias Model =
     , meddelande : Maybe Meddelande
     , lan : Dict Int Lan
     , vattendrag : Dict Int Vattendrag
-    , karta : Karta
+    , karta : Maybe Karta
     }
 
 
@@ -86,9 +86,18 @@ type Msg
     | UppdateraModel Model
 
 
-init : Session -> List Lan -> List (Resurs Vattendrag) -> ( Model, Cmd Msg )
+init : ( Model, Cmd Msg )
 init =
-    nytt
+    ( { id = Nothing
+      , form = emptyForm
+      , status = Inmatning
+      , meddelande = Nothing
+      , lan = Dict.empty
+      , vattendrag = Dict.empty
+      , karta = Nothing
+      }
+    , Cmd.none
+    )
 
 
 emptyForm : Form
@@ -110,28 +119,20 @@ emptyForm =
 
 nytt : Session -> List Lan -> List (Resurs Vattendrag) -> ( Model, Cmd Msg )
 nytt session lan vattendrag =
-    let
-        karta =
-            Karta.skapa "koordinaterMap"
-    in
     ( { id = Nothing
       , form = emptyForm
       , status = Inmatning
       , meddelande = Nothing
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs id v) -> ( id, v )) vattendrag
-      , karta = karta
+      , karta = Nothing
       }
-    , Karta.initiera karta
+    , Karta.initiera "koordinater"
     )
 
 
 redigera : Session -> List Lan -> List (Resurs Vattendrag) -> Resurs Fors -> ( Model, Cmd Msg )
 redigera session lan vattendrag (Resurs id fors) =
-    let
-        karta =
-            Karta.skapa "koordinaterMap"
-    in
     ( { id = Just id
       , form =
             { emptyForm
@@ -152,10 +153,22 @@ redigera session lan vattendrag (Resurs id fors) =
       , meddelande = Nothing
       , lan = Dict.fromList <| List.map (\l -> ( l.id, l )) lan
       , vattendrag = Dict.fromList <| List.map (\(Resurs x v) -> ( x, v )) vattendrag
-      , karta = karta
+      , karta = Nothing
       }
-    , Karta.initieraMarkering fors.koordinater karta
+    , Karta.initiera "koordinater"
     )
+
+
+updateKarta : Karta.Event -> Model -> ( Model, Cmd Msg )
+updateKarta kartevent model =
+    case kartevent of
+        Karta.Skapad karta ->
+            ( { model | karta = Just karta }
+            , Cmd.none
+            )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
@@ -509,8 +522,8 @@ rubrikView maybeId =
     el [ Font.size 30 ] (text rubrik)
 
 
-formView : Karta -> Form -> Element Msg
-formView karta form =
+formView : Maybe Karta -> Form -> Element Msg
+formView maybeKarta form =
     column [ spacing 20, width fill ]
         [ input "Namn" form.namn InputNamn
         , row [ spacing 20 ]
@@ -522,7 +535,7 @@ formView karta form =
             , input "Lyft" form.lyft InputLyft
             ]
         , input "Koordinater (lat, long)" form.koordinater InputKoordinater
-        , Karta.toElement karta
+        , Maybe.map Karta.toElement maybeKarta |> Maybe.withDefault (Element.text "Initerar karta...")
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
             [ input "Flöde min" form.minimum InputMinimum

@@ -2,14 +2,20 @@
 import 'ol/ol.css';
 import { skapa as skapaKarta, radera as raderaKarta, Karta } from "./Karta"
 
-const kartor = {}
+type Kartinstans = {
+    karta?: Karta
+    messages: any[]
+}
+
+const kartor: Map<string, Kartinstans> = new Map()
+
 var sendToElm = (msg) => { }
 
 export function registerApplication(app) {
     console.log("Registrerar Elm-app med portar:", app.ports);
 
     if (app.ports.kartaOutgoing) {
-        app.ports.kartaOutgoing.subscribe(recieveFromElm);
+        app.ports.kartaOutgoing.subscribe(onMessage);
     } else {
         console.log("Varning: port 'kartaOutgoing' saknas. Inga händelser kommer att tas emot från Elm-appen.")
     }
@@ -22,39 +28,85 @@ export function registerApplication(app) {
 }
 
 
-function recieveFromElm(message) {
-    console.log(message);
-    if (message.typ === "skapa_karta") {
-        setTimeout(() => {
+function onMessage(message) {
+    if (message.typ === "ny_karta") {
+        // NY KARTA
+        kartor.set(message.id, {
+            karta: undefined,
+            messages: []
+        });
 
-            var elem = document.getElementById(message.id);
-            console.log("element: ", elem)
+        sendToElm({
+            "typ": "karta_skapad",
+            "id": message.id
+        });
 
-            const karta = skapaKarta(message.id);
-            karta.onEnkelklick(enkelklickHandler);
-            kartor[message.id] = karta;
-
-            if (message.markering) {
-                karta.placeraMarkering([message.markering.long, message.markering.lat]);
-                karta.centreraKarta([message.markering.long, message.markering.lat]);
-            }
-
-        }, 100)
+        initMap(message.id)
+    } else {
+        const k = kartor.get(message.id)
+        console.log("Lägger medelande i kö: ", message)
+        k.messages.push(message)
+        processMessages(k)
     }
+}
+
+function processMessages(k: Kartinstans) {
+    if (!k.karta) {
+        console.log("Karta inte initierad ännu, inga meddelanden behandades!")
+        return
+    }
+
+    while (k.messages.length > 0) {
+        processMessage(k.messages.shift())
+    }
+}
+
+function processMessage(message) {
+    console.log(message)
+
+    const k = kartor.get(message.id)
 
     if (message.typ === "radera_karta") {
-        raderaKarta(kartor[message.id]);
-        delete kartor[message.id];
-    }
-
-    if (message.typ === "visa_lager") {
-        kartor[message.id].valjBakgrundslager(message.lagernamn);
+        raderaKarta(k.karta);
+        kartor.delete(message.id);
+    } else if (message.typ === "visa_lager") {
+        k.karta.valjBakgrundslager(message.lagernamn);
+    } else if (message.typ === "placera_kartnal") {
+        k.karta.placeraMarkering([message.long, message.lat]);
+    } else {
+        throw Error("okänd meddelandetyp: " + message.typ);
     }
 
 }
 
+
+function initMap(id: string) {
+    var elem = document.getElementById(id);
+
+    if (!elem) {
+        console.log("Ingen kart-div '" + id + "' hittades, försöker igen senare.")
+        setTimeout(() => initMap(id), 100)
+        return;
+    }
+    console.log("Kart-div: ", elem)
+
+    const k = kartor.get(id);
+
+    k.karta = skapaKarta(id);
+    k.karta.onEnkelklick(enkelklickHandler);
+    kartor[id] = k;
+
+    processMessages(k)
+}
+
+//     if (message.markering) {
+//    kartinstans.placeraMarkering([message.markering.long, message.markering.lat]);
+//    kartinstans.centreraKarta([message.markering.long, message.markering.lat]);
+//}
+
+
+
 function enkelklickHandler(karta, longLat) {
-    karta.placeraMarkering(longLat);
     sendToElm({
         "typ": "klick_i_karta",
         "id": karta.id,

@@ -13,9 +13,9 @@ import Url
 
 
 type alias Model =
-    { kartor : Dict String Karta
+    { karta : Maybe Karta
     , message : String
-    , dolj : List Karta
+    , dolj : Bool
     }
 
 
@@ -24,23 +24,16 @@ type Msg
     | UrlChanged Url.Url
     | ValjKartlager Karta Kartlager
     | GotKartEvent Karta.Event
-    | NyKarta
-    | DoljKarta Karta
+    | DoljKarta
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ _ _ =
-    let
-        kartor =
-            [ "karta1", "karta2" ] |> List.map (\x -> ( x, Karta.skapa x )) |> Dict.fromList
-    in
-    ( { kartor = kartor
+    ( { karta = Nothing
       , message = "Klicka gärna lite i kartan!"
-      , dolj = []
+      , dolj = False
       }
-    , Dict.values kartor
-        |> List.map Karta.initiera
-        |> Cmd.batch
+    , Karta.initiera "karta1"
     )
 
 
@@ -51,32 +44,21 @@ init _ _ _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        DoljKarta karta ->
-            let
-                dolj =
-                    if List.member karta model.dolj then
-                        List.filter (\k -> k /= karta) model.dolj
-
-                    else
-                        karta :: model.dolj
-            in
-            ( { model | dolj = dolj }, Cmd.none )
-
-        NyKarta ->
-            let
-                id =
-                    "karta" ++ String.fromInt (Dict.size model.kartor + 1)
-
-                karta =
-                    Karta.skapa id
-            in
-            ( { model | kartor = Dict.insert id karta model.kartor }, Karta.initiera karta )
+        DoljKarta ->
+            ( { model | dolj = not model.dolj }, Cmd.none )
 
         ValjKartlager karta lager ->
             ( model, Karta.visaLager lager karta )
 
-        GotKartEvent (Karta.KlickIKarta id lat long) ->
-            ( { model | message = id ++ ": " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long }, Cmd.none )
+        GotKartEvent (Karta.Skapad karta) ->
+            ( { model | karta = Just karta, message = "karta skapad" }
+            , karta |> Karta.placeraKartnal { lat = 60.67570159984868, long = 17.17447728525011 }
+            )
+
+        GotKartEvent (Karta.KlickIKarta karta lat long) ->
+            ( { model | message = Karta.identitet karta ++ ": " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long }
+            , karta |> Karta.placeraKartnal { lat = lat, long = long }
+            )
 
         GotKartEvent (Karta.Unknown error) ->
             ( { model | message = error }, Cmd.none )
@@ -98,17 +80,18 @@ view model =
     , body =
         [ Element.layout [] <|
             Element.column []
-                [ Element.Input.button []
-                    { label = text "Lägg till karta!", onPress = Just NyKarta }
-                , column [] <| List.map (\( id, k ) -> kartaView (List.member k model.dolj) id k) (Dict.toList model.kartor |> List.sortBy Tuple.first)
+                [ el []
+                    (Maybe.map (kartaView model.dolj) model.karta
+                        |> Maybe.withDefault (Element.text "Initierar kartan...")
+                    )
                 , Element.text model.message
                 ]
         ]
     }
 
 
-kartaView : Bool -> String -> Karta -> Element Msg
-kartaView hide rubrik karta =
+kartaView : Bool -> Karta -> Element Msg
+kartaView hide karta =
     let
         display =
             if hide then
@@ -118,8 +101,7 @@ kartaView hide rubrik karta =
                 "block"
     in
     column []
-        [ Element.el [ Font.size 30 ] <| Element.text rubrik
-        , Element.Input.button [] { label = text "Dölj", onPress = Just (DoljKarta karta) }
+        [ Element.Input.button [] { label = text "Dölj", onPress = Just DoljKarta }
         , kartlagervaljare karta
         , el [ Element.htmlAttribute (Html.Attributes.style "display" display) ] <| Karta.toElement karta
         , text

@@ -1,4 +1,4 @@
-port module Karta exposing (Event(..), Karta, Kartlager(..), initiera, initieraMarkering, skapa, subscribe, toElement, visaLager)
+port module Karta exposing (Event(..), Karta, Kartlager(..), identitet, initiera, placeraKartnal, subscribe, toElement, visaLager)
 
 import Element exposing (Element)
 import Html exposing (Html)
@@ -14,11 +14,12 @@ port kartaIncoming : (D.Value -> msg) -> Sub msg
 
 
 type Karta
-    = Karta String
+    = Karta { id : String }
 
 
 type Event
-    = KlickIKarta String Float Float
+    = Skapad Karta
+    | KlickIKarta Karta Float Float
     | Unknown String
 
 
@@ -28,37 +29,30 @@ type Kartlager
     | TopowebbNedtonad
 
 
-skapa : String -> Karta
-skapa id =
-    Karta id
+
+-- frågor
 
 
-initiera : Karta -> Cmd msg
-initiera (Karta id) =
+identitet : Karta -> String
+identitet (Karta { id }) =
+    id
+
+
+
+-- utgående kommandon
+
+
+initiera : String -> Cmd msg
+initiera id =
     kartaOutgoing <|
         E.object
-            [ ( "typ", E.string "skapa_karta" )
+            [ ( "typ", E.string "ny_karta" )
             , ( "id", E.string id )
-            ]
-
-
-initieraMarkering : { lat : Float, long : Float } -> Karta -> Cmd msg
-initieraMarkering { lat, long } (Karta id) =
-    kartaOutgoing <|
-        E.object
-            [ ( "typ", E.string "skapa_karta" )
-            , ( "id", E.string id )
-            , ( "markering"
-              , E.object
-                    [ ( "lat", E.float lat )
-                    , ( "long", E.float long )
-                    ]
-              )
             ]
 
 
 visaLager : Kartlager -> Karta -> Cmd msg
-visaLager lager (Karta id) =
+visaLager lager (Karta { id }) =
     kartaOutgoing <|
         E.object
             [ ( "typ", E.string "visa_lager" )
@@ -67,8 +61,19 @@ visaLager lager (Karta id) =
             ]
 
 
+placeraKartnal : { lat : Float, long : Float } -> Karta -> Cmd msg
+placeraKartnal { lat, long } (Karta { id }) =
+    kartaOutgoing <|
+        E.object
+            [ ( "typ", E.string "placera_kartnal" )
+            , ( "id", E.string id )
+            , ( "lat", E.float lat )
+            , ( "long", E.float long )
+            ]
+
+
 toElement : Karta -> Element msg
-toElement (Karta id) =
+toElement (Karta { id }) =
     Element.html <|
         Html.div
             [ HtmlAttr.id id
@@ -93,9 +98,12 @@ parseEvent value =
                 |> D.andThen
                     (\typ ->
                         case typ of
+                            "karta_skapad" ->
+                                D.map Skapad kartaDecoder
+
                             "klick_i_karta" ->
                                 D.map3 KlickIKarta
-                                    (D.field "id" D.string)
+                                    kartaDecoder
                                     (D.field "lat" D.float)
                                     (D.field "long" D.float)
 
@@ -109,6 +117,11 @@ parseEvent value =
 
         Err error ->
             Unknown <| D.errorToString error
+
+
+kartaDecoder : D.Decoder Karta
+kartaDecoder =
+    D.field "id" D.string |> D.andThen (\id -> D.succeed (Karta { id = id }))
 
 
 lagernamn : Kartlager -> String
