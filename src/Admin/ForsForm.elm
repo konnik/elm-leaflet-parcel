@@ -568,9 +568,15 @@ formView visaKarta maybeKarta form =
             ]
         , row [ spacing 20, width fill ]
             [ input "Koordinater (lat, long)" form.koordinater InputKoordinater
-            , el [ alignBottom ] <| knapp { label = "...", state = Aktiv } VisaDoljKarta
+
+            --, el [ alignBottom ] <| knapp { label = "...", state = Aktiv } VisaDoljKarta
             ]
-        , el [ paddingXY 0 10 ] (Maybe.map (Karta.toElement visaKarta) maybeKarta |> Maybe.withDefault (Element.text "Initerar karta..."))
+        , el
+            [ paddingEach { left = 0, right = 0, top = 0, bottom = 10 }
+            , width fill
+            , height (px 300)
+            ]
+            (Maybe.map (Karta.toElement visaKarta) maybeKarta |> Maybe.withDefault (Element.text "Initerar karta..."))
         , input "Smhipunkt" form.smhipunkt InputSmhipunkt
         , row [ spacing 20 ]
             [ input "Flöde min" form.minimum InputMinimum

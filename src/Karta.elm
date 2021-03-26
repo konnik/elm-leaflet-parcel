@@ -93,16 +93,23 @@ toElement visible (Karta { id }) =
             else
                 "none"
     in
-    --    Element.el [ Element.htmlAttribute (HtmlAttr.style "display" display) ] <|
-    Element.html <|
-        Html.div
-            [ HtmlAttr.id id
-            , HtmlAttr.style "display" display
-            , HtmlAttr.style "width" "600"
-            , HtmlAttr.style "height" "300"
-            , HtmlAttr.style "border" "2px solid red"
-            ]
-            []
+    Element.el [ Element.width Element.fill, Element.height Element.fill ] <|
+        Element.html <|
+            Html.div
+                [ HtmlAttr.style "display" display
+                , HtmlAttr.style "width" "100%"
+                , HtmlAttr.style "height" "100%"
+                , HtmlAttr.style "z-index" "0"
+                ]
+                [ Html.div
+                    [ HtmlAttr.id id
+                    , HtmlAttr.style "width" "100%"
+                    , HtmlAttr.style "height" "100%"
+                    , HtmlAttr.style "position" "relative"
+                    , HtmlAttr.style "z-index" "0"
+                    ]
+                    []
+                ]
 
 
 subscribe : (Event -> msg) -> Sub msg
