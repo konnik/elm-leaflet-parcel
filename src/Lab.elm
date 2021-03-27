@@ -1,5 +1,6 @@
 module Lab exposing (main)
 
+import Api.Smhi
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -9,6 +10,7 @@ import Element.Input
 import Html exposing (Html)
 import Html.Attributes
 import Karta exposing (Karta, Kartlager(..))
+import RemoteData
 import Url
 
 
@@ -25,6 +27,7 @@ type Msg
     | ValjKartlager Karta Kartlager
     | GotKartEvent Karta.Event
     | DoljKarta
+    | GotSmhiPunkt (RemoteData.WebData String)
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -33,7 +36,10 @@ init _ _ _ =
       , message = "Klicka gärna lite i kartan!"
       , dolj = False
       }
-    , Karta.initiera "karta1"
+    , Cmd.batch
+        [ Karta.initiera "karta1"
+        , Api.Smhi.sokSmhipunkt { x = 0, y = 0 } GotSmhiPunkt
+        ]
     )
 
 
@@ -44,6 +50,24 @@ init _ _ _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GotSmhiPunkt webData ->
+            let
+                m =
+                    case webData of
+                        RemoteData.NotAsked ->
+                            "?"
+
+                        RemoteData.Loading ->
+                            "..."
+
+                        RemoteData.Failure _ ->
+                            "kunde inte hämta smhi-punkt"
+
+                        RemoteData.Success punkt ->
+                            "Smhipunkt: " ++ punkt
+            in
+            ( { model | message = m }, Cmd.none )
+
         DoljKarta ->
             ( { model | dolj = not model.dolj }, Cmd.none )
 
