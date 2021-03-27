@@ -1,5 +1,6 @@
 module Lab exposing (main)
 
+import Api.Hojd exposing (Hojd)
 import Api.Smhi exposing (Smhipunkt)
 import Browser
 import Browser.Navigation as Nav
@@ -17,6 +18,8 @@ import Url
 type alias Model =
     { karta : Maybe Karta
     , message : String
+    , hojd : RemoteData.WebData Float
+    , smhipunkt : RemoteData.WebData Smhipunkt
     , dolj : Bool
     }
 
@@ -28,18 +31,18 @@ type Msg
     | GotKartEvent Karta.Event
     | DoljKarta
     | GotSmhiPunkt (RemoteData.WebData Smhipunkt)
+    | GotHojd (RemoteData.WebData Hojd)
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ _ _ =
     ( { karta = Nothing
       , message = "Klicka gärna lite i kartan!"
+      , hojd = RemoteData.NotAsked
+      , smhipunkt = RemoteData.NotAsked
       , dolj = False
       }
-    , Cmd.batch
-        [ Karta.initiera "karta1"
-        , Api.Smhi.sokSmhipunkt { lat = 60.72975, long = 17.12693 } GotSmhiPunkt
-        ]
+    , Karta.initiera "karta1"
     )
 
 
@@ -51,23 +54,11 @@ init _ _ _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotSmhiPunkt webData ->
-            let
-                m =
-                    case webData of
-                        RemoteData.NotAsked ->
-                            "?"
+        GotSmhiPunkt smhipunkt ->
+            ( { model | smhipunkt = smhipunkt }, Cmd.none )
 
-                        RemoteData.Loading ->
-                            "..."
-
-                        RemoteData.Failure _ ->
-                            "kunde inte hämta smhi-punkt"
-
-                        RemoteData.Success punkt ->
-                            "Smhipunkt: " ++ String.fromInt punkt.punkt ++ " (" ++ String.fromFloat punkt.koordinater.lat ++ ", " ++ String.fromFloat punkt.koordinater.long ++ ")"
-            in
-            ( { model | message = m }, Cmd.none )
+        GotHojd hojd ->
+            ( { model | hojd = hojd }, Cmd.none )
 
         DoljKarta ->
             ( { model | dolj = not model.dolj }, Cmd.none )
@@ -81,8 +72,16 @@ update msg model =
             )
 
         GotKartEvent (Karta.KlickIKarta karta lat long) ->
-            ( { model | message = Karta.identitet karta ++ ": " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long }
-            , karta |> Karta.placeraKartnal { lat = lat, long = long }
+            ( { model
+                | message = "Du klickade på koordinat " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long
+                , hojd = RemoteData.Loading
+                , smhipunkt = RemoteData.Loading
+              }
+            , Cmd.batch
+                [ karta |> Karta.placeraKartnal { lat = lat, long = long }
+                , Api.Smhi.sokSmhipunkt { lat = lat, long = long } GotSmhiPunkt
+                , Api.Hojd.hamtaHojd { lat = lat, long = long } GotHojd
+                ]
             )
 
         GotKartEvent (Karta.Unknown error) ->
@@ -110,17 +109,52 @@ view model =
                         |> Maybe.withDefault (Element.text "Initierar kartan...")
                     )
                 , Element.text model.message
+                , viewRemoteData viewHojd model.hojd
+                , viewRemoteData viewSmhipunkt model.smhipunkt
                 ]
         ]
     }
 
 
+viewHojd : Float -> Element msg
+viewHojd hojd =
+    Element.text <| "Höjd: " ++ String.fromFloat hojd
+
+
+viewSmhipunkt : Smhipunkt -> Element msg
+viewSmhipunkt smhipunkt =
+    Element.text <|
+        "Smhipunkt: "
+            ++ String.fromInt smhipunkt.punkt
+            ++ " ("
+            ++ String.fromFloat smhipunkt.koordinater.lat
+            ++ ", "
+            ++ String.fromFloat smhipunkt.koordinater.long
+            ++ ")"
+
+
+viewRemoteData : (a -> Element msg) -> RemoteData.WebData a -> Element msg
+viewRemoteData toElement data =
+    case data of
+        RemoteData.NotAsked ->
+            text "Not asked..."
+
+        RemoteData.Loading ->
+            text "Loading..."
+
+        RemoteData.Failure _ ->
+            text "FEL!"
+
+        RemoteData.Success x ->
+            toElement x
+
+
 kartaView : Bool -> Karta -> Element Msg
 kartaView hide karta =
-    column []
+    column [ width (px 700), height (px 500) ]
         [ Element.Input.button [] { label = text "Dölj", onPress = Just DoljKarta }
         , kartlagervaljare karta
-        , Karta.toElement (not hide) karta
+        , el [ width fill, height fill ] <| Karta.toElement (not hide) karta
         , text
             (if hide then
                 "DOLD"
