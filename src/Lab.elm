@@ -1,6 +1,6 @@
 module Lab exposing (main)
 
-import Api.Smhi
+import Api.Smhi exposing (Smhipunkt)
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -27,7 +27,7 @@ type Msg
     | ValjKartlager Karta Kartlager
     | GotKartEvent Karta.Event
     | DoljKarta
-    | GotSmhiPunkt (RemoteData.WebData String)
+    | GotSmhiPunkt (RemoteData.WebData Smhipunkt)
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -38,12 +38,13 @@ init _ _ _ =
       }
     , Cmd.batch
         [ Karta.initiera "karta1"
-        , Api.Smhi.sokSmhipunkt { x = 0, y = 0 } GotSmhiPunkt
+        , Api.Smhi.sokSmhipunkt { lat = 60.72975, long = 17.12693 } GotSmhiPunkt
         ]
     )
 
 
 
+--60.71786, 17.14122
 -- update
 
 
@@ -64,7 +65,7 @@ update msg model =
                             "kunde inte hämta smhi-punkt"
 
                         RemoteData.Success punkt ->
-                            "Smhipunkt: " ++ punkt
+                            "Smhipunkt: " ++ String.fromInt punkt.punkt ++ " (" ++ String.fromFloat punkt.koordinater.lat ++ ", " ++ String.fromFloat punkt.koordinater.long ++ ")"
             in
             ( { model | message = m }, Cmd.none )
 
