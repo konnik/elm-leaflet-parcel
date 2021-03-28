@@ -177,7 +177,7 @@ updateKarta kartevent model =
                 |> Maybe.map
                     (\x ->
                         Cmd.batch
-                            [ Karta.placeraKartnal x karta
+                            [ Karta.placeraKartnal "koordinater" x karta
                             , Karta.navigeraTill x karta
                             ]
                     )
@@ -193,7 +193,7 @@ updateKarta kartevent model =
                     String.left 8 (String.fromFloat lat) ++ ", " ++ String.left 8 (String.fromFloat long)
             in
             ( { model | form = { oldForm | koordinater = coordStr } }
-            , karta |> Karta.placeraKartnal { lat = lat, long = long }
+            , karta |> Karta.placeraKartnal "koordinater" { lat = lat, long = long }
             )
 
         _ ->
