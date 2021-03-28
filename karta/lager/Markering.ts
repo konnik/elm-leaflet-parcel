@@ -10,20 +10,16 @@ import { Coordinate } from 'ol/coordinate';
 import { Options } from 'ol/layer/BaseVector';
 
 export class MarkeringLayer extends VectorLayer {
-    iconFeature: Feature
+    markeringar: Map<String, Feature>
 
     constructor() {
 
-        const iconFeature = new Feature({
-            geometry: new Point(fromLonLat([17.198944862118232, 60.62266736314186])),
-            name: 'Gävle någonstans...'
-        });
 
         super({
             source: new VectorSource({
-                features: [iconFeature]
+                features: []
             }),
-            visible: false,
+            visible: true,
             style: new Style({
                 image: new Icon({
                     anchor: [0.5, 46],
@@ -34,12 +30,21 @@ export class MarkeringLayer extends VectorLayer {
             })
         });
 
-        this.iconFeature = iconFeature;
+        this.markeringar = new Map()
     }
 
-    placeraMarkering(lonLat: Coordinate): void {
-        this.iconFeature.setGeometry(new Point(fromLonLat(lonLat)));
-        this.setVisible(true);
+    placeraMarkering(namn: string, lonLat: Coordinate): void {
+        if (this.markeringar.has(namn)) {
+            const m = this.markeringar.get(namn)
+            m.setGeometry(new Point(fromLonLat(lonLat)));
+        } else {
+            const m = new Feature({
+                geometry: new Point(fromLonLat(lonLat)),
+                name: namn
+            });
+            this.markeringar.set(namn, m)
+            this.getSource().addFeature(m)
+        }
     }
 }
 

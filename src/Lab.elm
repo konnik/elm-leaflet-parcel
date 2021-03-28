@@ -30,8 +30,8 @@ type Msg
     | ValjKartlager Karta Kartlager
     | GotKartEvent Karta.Event
     | DoljKarta
-    | GotSmhiPunkt (RemoteData.WebData Smhipunkt)
-    | GotHojd (RemoteData.WebData Hojd)
+    | GotSmhiPunkt Karta (RemoteData.WebData Smhipunkt)
+    | GotHojd Karta (RemoteData.WebData Hojd)
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -54,10 +54,12 @@ init _ _ _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotSmhiPunkt smhipunkt ->
-            ( { model | smhipunkt = smhipunkt }, Cmd.none )
+        GotSmhiPunkt karta smhipunkt ->
+            ( { model | smhipunkt = smhipunkt }
+            , RemoteData.unwrap Cmd.none (\punkt -> Karta.placeraKartnal "smhi" punkt.koordinater karta) smhipunkt
+            )
 
-        GotHojd hojd ->
+        GotHojd karta hojd ->
             ( { model | hojd = hojd }, Cmd.none )
 
         DoljKarta ->
@@ -68,7 +70,7 @@ update msg model =
 
         GotKartEvent (Karta.Skapad karta) ->
             ( { model | karta = Just karta, message = "karta skapad" }
-            , karta |> Karta.placeraKartnal { lat = 60.67570159984868, long = 17.17447728525011 }
+            , Cmd.none
             )
 
         GotKartEvent (Karta.KlickIKarta karta lat long) ->
@@ -78,9 +80,9 @@ update msg model =
                 , smhipunkt = RemoteData.Loading
               }
             , Cmd.batch
-                [ karta |> Karta.placeraKartnal { lat = lat, long = long }
-                , Api.Smhi.sokSmhipunkt { lat = lat, long = long } GotSmhiPunkt
-                , Api.Hojd.hamtaHojd { lat = lat, long = long } GotHojd
+                [ karta |> Karta.placeraKartnal "klick" { lat = lat, long = long }
+                , Api.Smhi.sokSmhipunkt { lat = lat, long = long } (GotSmhiPunkt karta)
+                , Api.Hojd.hamtaHojd { lat = lat, long = long } (GotHojd karta)
                 ]
             )
 

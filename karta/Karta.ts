@@ -45,8 +45,8 @@ export class Karta {
         this.topowebbnedtonadLayer.setVisible(lager === Bakgrundslager.TOPOWEBB_NEDTONAD);
     }
 
-    placeraMarkering(longLat: Coordinate): void {
-        this.markeringLager.placeraMarkering(longLat);
+    placeraMarkering(namn, longLat: Coordinate): void {
+        this.markeringLager.placeraMarkering(namn, longLat);
         this.markeringLager.setVisible(true);
     }
 

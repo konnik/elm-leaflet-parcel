@@ -61,12 +61,13 @@ visaLager lager (Karta { id }) =
             ]
 
 
-placeraKartnal : { lat : Float, long : Float } -> Karta -> Cmd msg
-placeraKartnal { lat, long } (Karta { id }) =
+placeraKartnal : String -> { lat : Float, long : Float } -> Karta -> Cmd msg
+placeraKartnal namn { lat, long } (Karta { id }) =
     kartaOutgoing <|
         E.object
             [ ( "typ", E.string "placera_kartnal" )
             , ( "id", E.string id )
+            , ( "namn", E.string namn )
             , ( "lat", E.float lat )
             , ( "long", E.float long )
             ]

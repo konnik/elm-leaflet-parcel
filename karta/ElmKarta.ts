@@ -72,7 +72,7 @@ function processMessage(message) {
     } else if (message.typ === "visa_lager") {
         k.karta.valjBakgrundslager(message.lagernamn);
     } else if (message.typ === "placera_kartnal") {
-        k.karta.placeraMarkering([message.long, message.lat]);
+        k.karta.placeraMarkering(message.namn, [message.long, message.lat]);
     } else if (message.typ === "navigera_till") {
         k.karta.centreraKarta([message.long, message.lat]);
     } else {
