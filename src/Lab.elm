@@ -77,7 +77,7 @@ update msg model =
 
         GotKartEvent (Karta.KlickIKarta karta lat long) ->
             ( { model
-                | message = "Koordinat: " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long
+                | message = "Koord: " ++ String.left 8 (String.fromFloat lat) ++ ", " ++ String.left 7 (String.fromFloat long)
                 , hojd = RemoteData.Loading
                 , smhipunkt = RemoteData.Loading
               }
@@ -124,13 +124,13 @@ view model =
 
 viewHojd : Float -> Element msg
 viewHojd hojd =
-    Element.text <| "Höjd: " ++ String.fromFloat hojd
+    Element.text <| "H: " ++ String.fromFloat hojd
 
 
 viewSmhipunkt : Smhipunkt -> Element msg
 viewSmhipunkt smhipunkt =
     Element.text <|
-        "Smhipunkt: "
+        "Smhi: "
             ++ String.fromInt smhipunkt.punkt
 
 
