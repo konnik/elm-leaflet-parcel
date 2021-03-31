@@ -23,7 +23,7 @@ export class Karta {
     terrangskuggningLager = skapaTerrangskuggning();
     markeringLager: MarkeringLayer = skapaMarkering();
 
-    constructor(id: string, bakgrundslager: Bakgrundslager = Bakgrundslager.TERRANGSKUGGNING) {
+    constructor(id: string, bakgrundslager: Bakgrundslager = Bakgrundslager.TOPOWEBB) {
         this.id = id;
         //this.ortoLayer = skapaOrtofoto();
         //this.topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);

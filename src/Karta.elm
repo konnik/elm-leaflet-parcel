@@ -27,6 +27,7 @@ type Kartlager
     = Orto
     | Topowebb
     | TopowebbNedtonad
+    | Terrangskuggning
 
 
 
@@ -164,3 +165,6 @@ lagernamn kartlager =
 
         TopowebbNedtonad ->
             "topowebb_nedtonad"
+
+        Terrangskuggning ->
+            "terrangskuggning"

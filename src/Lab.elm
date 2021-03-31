@@ -5,7 +5,9 @@ import Api.Smhi exposing (Smhipunkt)
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Element exposing (Element, alignRight, column, el, fill, height, htmlAttribute, padding, px, row, spacing, text, width)
+import Element exposing (Element, alignRight, centerX, column, el, fill, height, htmlAttribute, padding, paddingXY, px, rgb255, row, spacing, text, width)
+import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
 import Element.Input
 import Html exposing (Html)
@@ -153,10 +155,20 @@ viewRemoteData toElement data =
 
 kartaView : Bool -> Karta -> Element Msg
 kartaView hide karta =
-    column [ width (px 700), height (px 500) ]
+    column
+        [ width (px 700)
+        , height (px 500)
+        , spacing 10
+        ]
         [ Element.Input.button [] { label = text "Dölj", onPress = Just DoljKarta }
         , kartlagervaljare karta
-        , el [ width fill, height fill ] <| Karta.toElement (not hide) karta
+        , el
+            [ Border.width 2
+            , width fill
+            , height fill
+            ]
+          <|
+            Karta.toElement (not hide) karta
         , text
             (if hide then
                 "DOLD"
@@ -169,17 +181,23 @@ kartaView hide karta =
 
 kartlagervaljare : Karta -> Element Msg
 kartlagervaljare karta =
-    Element.row [ Element.spacing 30 ]
-        [ lagerBtn "Orto" karta Karta.Orto
-        , lagerBtn "Topowebb" karta Karta.Topowebb
-        , lagerBtn "Topowebb nedtonad" karta Karta.TopowebbNedtonad
+    Element.row [ Element.spacing 5, centerX ]
+        [ lagerBtn "Ortofoto" karta Karta.Orto
+        , lagerBtn "Karta" karta Karta.Topowebb
+        , lagerBtn "Nedtonad karta " karta Karta.TopowebbNedtonad
+        , lagerBtn "Terrängskuggning" karta Karta.Terrangskuggning
         ]
 
 
 lagerBtn : String -> Karta -> Karta.Kartlager -> Element Msg
 lagerBtn label karta kartlager =
     Element.Input.button
-        []
+        [ Border.width 2
+        , Border.rounded 14
+        , Background.color (rgb255 200 255 200)
+        , paddingXY 10 5
+        , Font.size 17
+        ]
         { label = Element.text label, onPress = Just (ValjKartlager karta kartlager) }
 
 
