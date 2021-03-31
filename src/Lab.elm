@@ -5,7 +5,7 @@ import Api.Smhi exposing (Smhipunkt)
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Element exposing (Element, alignRight, centerX, column, el, fill, height, htmlAttribute, padding, paddingXY, px, rgb255, row, spacing, text, width)
+import Element exposing (Element, alignRight, centerX, centerY, column, el, fill, height, htmlAttribute, padding, paddingXY, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -77,7 +77,7 @@ update msg model =
 
         GotKartEvent (Karta.KlickIKarta karta lat long) ->
             ( { model
-                | message = "Koord: " ++ String.left 8 (String.fromFloat lat) ++ ", " ++ String.left 7 (String.fromFloat long)
+                | message = String.left 7 (String.fromFloat lat) ++ ", " ++ String.left 6 (String.fromFloat long)
                 , hojd = RemoteData.Loading
                 , smhipunkt = RemoteData.Loading
               }
@@ -112,9 +112,11 @@ view model =
                     (Maybe.map kartaView model.karta
                         |> Maybe.withDefault (Element.text "Initierar kartan...")
                     )
-                , row [ centerX, spacing 20 ]
+                , row [ centerY, centerX, spacing 10, Font.size 13 ]
                     [ Element.text model.message
+                    , text "|"
                     , viewRemoteData viewHojd model.hojd
+                    , text "|"
                     , viewRemoteData viewSmhipunkt model.smhipunkt
                     ]
                 ]
@@ -124,14 +126,12 @@ view model =
 
 viewHojd : Float -> Element msg
 viewHojd hojd =
-    Element.text <| "H: " ++ String.fromFloat hojd
+    Element.text <| "H:" ++ String.fromFloat hojd
 
 
 viewSmhipunkt : Smhipunkt -> Element msg
 viewSmhipunkt smhipunkt =
-    Element.text <|
-        "Smhi: "
-            ++ String.fromInt smhipunkt.punkt
+    Element.text <| "SMHI:" ++ String.fromInt smhipunkt.punkt
 
 
 viewRemoteData : (a -> Element msg) -> RemoteData.WebData a -> Element msg
