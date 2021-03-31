@@ -4,12 +4,14 @@ import { toLonLat, fromLonLat } from 'ol/proj';
 import { skapa as skapaTopowebb, TopowebbVariant } from "./lager/Topowebb"
 import { skapa as skapaOrtofoto } from "./lager/Ortofoto"
 import { MarkeringLayer, skapa as skapaMarkering } from './lager/Markering';
+import { skapa as skapaTerrangskuggning } from './lager/Terrangskuggning';
 import { Coordinate } from 'ol/coordinate';
 
 export enum Bakgrundslager {
     ORTOFOTO = "ortofoto",
     TOPOWEBB = "topowebb_normal",
-    TOPOWEBB_NEDTONAD = "topowebb_nedtonad"
+    TOPOWEBB_NEDTONAD = "topowebb_nedtonad",
+    TERRANGSKUGGNING = "terrangskuggning"
 }
 
 export class Karta {
@@ -18,18 +20,26 @@ export class Karta {
     ortoLayer = skapaOrtofoto();
     topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);
     topowebbnedtonadLayer = skapaTopowebb(TopowebbVariant.NEDTONAD);
+    terrangskuggningLager = skapaTerrangskuggning();
     markeringLager: MarkeringLayer = skapaMarkering();
 
-    constructor(id: string, bakgrundslager: Bakgrundslager = Bakgrundslager.TOPOWEBB) {
+    constructor(id: string, bakgrundslager: Bakgrundslager = Bakgrundslager.TERRANGSKUGGNING) {
         this.id = id;
-        this.ortoLayer = skapaOrtofoto();
-        this.topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);
-        this.topowebbnedtonadLayer = skapaTopowebb(TopowebbVariant.NEDTONAD);
-        this.markeringLager = skapaMarkering();
+        //this.ortoLayer = skapaOrtofoto();
+        //this.topowebbLayer = skapaTopowebb(TopowebbVariant.NORMAL);
+        //this.topowebbnedtonadLayer = skapaTopowebb(TopowebbVariant.NEDTONAD);
+        //this.markeringLager = skapaMarkering();
+        //this.terrangskuggningLager = skapaTerrangskuggning();
 
         this.map = new Map({
             target: id,
-            layers: [this.ortoLayer, this.topowebbLayer, this.topowebbnedtonadLayer, this.markeringLager],
+            layers: [
+                this.ortoLayer,
+                this.topowebbLayer,
+                this.topowebbnedtonadLayer,
+                this.terrangskuggningLager,
+                this.markeringLager
+            ],
             view: new View({
                 center: [1909474.963338217, 8552634.820602188],
                 zoom: 11
@@ -43,6 +53,7 @@ export class Karta {
         this.ortoLayer.setVisible(lager === Bakgrundslager.ORTOFOTO);
         this.topowebbLayer.setVisible(lager === Bakgrundslager.TOPOWEBB);
         this.topowebbnedtonadLayer.setVisible(lager === Bakgrundslager.TOPOWEBB_NEDTONAD);
+        this.terrangskuggningLager.setVisible(lager === Bakgrundslager.TERRANGSKUGGNING);
     }
 
     placeraMarkering(namn, longLat: Coordinate): void {
