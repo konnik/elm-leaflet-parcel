@@ -171,10 +171,10 @@ kartaView karta =
 kartlagervaljare : Karta -> Element Msg
 kartlagervaljare karta =
     Element.row [ Element.spacing 5, centerX ]
-        [ lagerBtn "Ortofoto" karta Karta.Orto
+        [ lagerBtn "Orto" karta Karta.Orto
         , lagerBtn "Karta" karta Karta.Topowebb
-        , lagerBtn "Nedtonad karta " karta Karta.TopowebbNedtonad
-        , lagerBtn "Terrängskuggning" karta Karta.Terrangskuggning
+        , lagerBtn "Nedtonad " karta Karta.TopowebbNedtonad
+        , lagerBtn "Skuggning" karta Karta.Terrangskuggning
         ]
 
 
