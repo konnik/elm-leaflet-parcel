@@ -71,13 +71,13 @@ update msg model =
             ( model, Karta.visaLager lager karta )
 
         GotKartEvent (Karta.Skapad karta) ->
-            ( { model | karta = Just karta, message = "karta skapad" }
+            ( { model | karta = Just karta, message = "Klicka lite i kartan vettja..." }
             , Cmd.none
             )
 
         GotKartEvent (Karta.KlickIKarta karta lat long) ->
             ( { model
-                | message = "Du klickade på koordinat " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long
+                | message = "Koordinat: " ++ String.fromFloat lat ++ ", " ++ String.fromFloat long
                 , hojd = RemoteData.Loading
                 , smhipunkt = RemoteData.Loading
               }
@@ -106,15 +106,17 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Lab"
     , body =
-        [ Element.layout [] <|
-            Element.column []
-                [ el []
-                    (Maybe.map (kartaView model.dolj) model.karta
+        [ Element.layout [ width fill, height fill ] <|
+            Element.column [ paddingXY 0 10, width fill, height fill ]
+                [ el [ width fill, height fill ]
+                    (Maybe.map kartaView model.karta
                         |> Maybe.withDefault (Element.text "Initierar kartan...")
                     )
-                , Element.text model.message
-                , viewRemoteData viewHojd model.hojd
-                , viewRemoteData viewSmhipunkt model.smhipunkt
+                , row [ centerX, spacing 20 ]
+                    [ Element.text model.message
+                    , viewRemoteData viewHojd model.hojd
+                    , viewRemoteData viewSmhipunkt model.smhipunkt
+                    ]
                 ]
         ]
     }
@@ -130,21 +132,16 @@ viewSmhipunkt smhipunkt =
     Element.text <|
         "Smhipunkt: "
             ++ String.fromInt smhipunkt.punkt
-            ++ " ("
-            ++ String.fromFloat smhipunkt.koordinater.lat
-            ++ ", "
-            ++ String.fromFloat smhipunkt.koordinater.long
-            ++ ")"
 
 
 viewRemoteData : (a -> Element msg) -> RemoteData.WebData a -> Element msg
 viewRemoteData toElement data =
     case data of
         RemoteData.NotAsked ->
-            text "Not asked..."
+            text ""
 
         RemoteData.Loading ->
-            text "Loading..."
+            text "..."
 
         RemoteData.Failure _ ->
             text "FEL!"
@@ -153,29 +150,21 @@ viewRemoteData toElement data =
             toElement x
 
 
-kartaView : Bool -> Karta -> Element Msg
-kartaView hide karta =
+kartaView : Karta -> Element Msg
+kartaView karta =
     column
-        [ width (px 700)
-        , height (px 500)
+        [ width fill
+        , height fill
         , spacing 10
         ]
-        [ Element.Input.button [] { label = text "Dölj", onPress = Just DoljKarta }
-        , kartlagervaljare karta
+        [ kartlagervaljare karta
         , el
             [ Border.width 2
             , width fill
             , height fill
             ]
           <|
-            Karta.toElement (not hide) karta
-        , text
-            (if hide then
-                "DOLD"
-
-             else
-                "SYNLIG"
-            )
+            Karta.toElement True karta
         ]
 
 
